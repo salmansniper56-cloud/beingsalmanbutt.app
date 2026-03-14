@@ -12,6 +12,14 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+const hasConfig = firebaseConfig.apiKey && firebaseConfig.projectId;
+if (!hasConfig) {
+  throw new Error(
+    'Firebase env vars missing. Add VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, ' +
+    'VITE_FIREBASE_STORAGE_BUCKET, VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID in Vercel → Settings → Environment Variables, then redeploy.'
+  );
+}
+
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);

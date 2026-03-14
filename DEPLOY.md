@@ -62,3 +62,38 @@ Use **Vercel** (free) to deploy from GitHub and attach your domain.
    - Your Vercel URL (e.g. `beingsalmanbutt-app.vercel.app`) if you want to test before DNS is ready.
 
 After that, your app will be live at **https://beingsalmanbutt.app**.
+
+---
+
+## Blank or white screen?
+
+1. **Redeploy after adding env vars**  
+   Vercel only injects Environment Variables at **build** time. After adding or changing them: **Deployments** → three dots on latest deployment → **Redeploy**.
+
+2. **Confirm all six variables**  
+   In **Settings → Environment Variables** you must have:  
+   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`.  
+   No typos, and no extra spaces when pasting.
+
+3. **Firebase Authorized domains**  
+   In Firebase Console → **Authentication** → **Settings** → **Authorized domains**, add:  
+   `beingsalmanbutt.app` and `www.beingsalmanbutt.app`.
+
+4. **Browser console**  
+   Open DevTools (F12) → **Console**. Any red errors there will point to the problem.
+
+---
+
+## Stripe (Boost ad payments)
+
+To fix "internal" or "Boost is not configured" when boosting an ad:
+
+1. **Stripe Dashboard** – Create two products with one-time prices (e.g. "Boost 24h", "Boost 7 days"). Copy each **Price ID** (starts with `price_`).
+
+2. **Firebase secrets** – Run `firebase functions:secrets:set STRIPE_SECRET_KEY` and enter your Stripe secret key (starts with `sk_`).
+
+3. **Env vars for price IDs** – Deploy with:  
+   `firebase deploy --only functions --set-env-vars STRIPE_PRICE_24H=price_xxx,STRIPE_PRICE_7D=price_yyy`  
+   (use your real Stripe price IDs).
+
+4. **Webhook** – In Stripe add endpoint to your `stripeWebhook` URL; set `STRIPE_WEBHOOK_SECRET` in Firebase and redeploy.

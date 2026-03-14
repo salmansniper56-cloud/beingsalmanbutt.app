@@ -12,11 +12,46 @@
   font-size: 1.5rem;
 }
 
+.feed-tabs {
+  display: flex;
+  gap: 0;
+}
+
+.feed-tab {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.feed-tab:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.feed-tab:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-left: none;
+}
+
+.feed-tab.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
 .feed-toolbar select {
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
+}
+
+.feed-posts {
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .feed-loading,

@@ -1,12 +1,21 @@
 import { Link } from 'react-router-dom';
+import AdImage from './AdImage';
 import './AdCard.css';
 
+const PLACEHOLDER = 'https://via.placeholder.com/400x240?text=No+image';
+
+function getFirstImageUrl(ad) {
+  const images = Array.isArray(ad.images) ? ad.images : [];
+  const first = images[0];
+  return typeof first === 'string' ? first : (first?.url ?? null) || PLACEHOLDER;
+}
+
 export default function AdCard({ ad, likeCount, onLike, isLiked, showSeller }) {
-  const imageUrl = ad.images?.[0] || 'https://via.placeholder.com/400x240?text=No+image';
+  const imageUrl = getFirstImageUrl(ad);
   return (
     <article className="ad-card">
       <Link to={`/ad/${ad.id}`} className="ad-card-image-wrap">
-        <img src={imageUrl} alt={ad.title} />
+        <AdImage src={imageUrl} alt={ad.title} />
         {ad.boostExpiresAt && new Date(ad.boostExpiresAt) > new Date() && (
           <span className="ad-card-boost">Boosted</span>
         )}

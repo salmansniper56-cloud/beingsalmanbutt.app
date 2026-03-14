@@ -216,3 +216,95 @@ export async function getAdsByUser(uid) {
   ads.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
   return ads;
 }
+
+// ---------- Posts ----------
+export async function createPost(data) {
+  const ref = collection(db, 'posts');
+  const docRef = await addDoc(ref, {
+    ...data,
+    likeCount: 0,
+    commentCount: 0,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function updatePostMedia(postId, mediaUrls) {
+  const ref = doc(db, 'posts', postId);
+  await updateDoc(ref, { mediaUrls, updatedAt: serverTimestamp() });
+}
+
+export async function getPosts(opts = {}) {
+  const { limitCount = 50, lastDoc } = opts;
+  let q = query(
+    collection(db, 'posts'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  if (lastDoc) q = query(q, startAfter(lastDoc));
+  const snap = await getDocs(q);
+  const posts = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+    };
+  });
+  return { posts, lastDoc: snap.docs[snap.docs.length - 1] };
+}
+
+export async function togglePostLike(postId, uid) {
+  const likeRef = doc(db, 'posts', postId, 'likes', uid);
+  const postRef = doc(db, 'posts', postId);
+  const [likeSnap, postSnap] = await Promise.all([getDoc(likeRef), getDoc(postRef)]);
+  const currentCount = postSnap.data()?.likeCount ?? 0;
+  const batch = writeBatch(db);
+  if (likeSnap.exists()) {
+    batch.delete(likeRef);
+    batch.update(postRef, { likeCount: Math.max(0, currentCount - 1) });
+  } else {
+    batch.set(likeRef, { createdAt: serverTimestamp() });
+    batch.update(postRef, { likeCount: currentCount + 1 });
+  }
+  await batch.commit();
+}
+
+export async function isPostLiked(postId, uid) {
+  const ref = doc(db, 'posts', postId, 'likes', uid);
+  const snap = await getDoc(ref);
+  return snap.exists();
+}
+
+export async function getComments(postId) {
+  const q = query(
+    collection(db, 'posts', postId, 'comments'),
+    orderBy('createdAt', 'asc'),
+    limit(100)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+    };
+  });
+}
+
+export async function addComment(postId, { userId, userName, userPhotoURL, text }) {
+  const commentsRef = collection(db, 'posts', postId, 'comments');
+  const postRef = doc(db, 'posts', postId);
+  const postSnap = await getDoc(postRef);
+  const currentCount = postSnap.data()?.commentCount ?? 0;
+  await addDoc(commentsRef, {
+    userId,
+    userName: userName || 'User',
+    userPhotoURL: userPhotoURL || '',
+    text,
+    createdAt: serverTimestamp(),
+  });
+  await updateDoc(postRef, { commentCount: currentCount + 1, updatedAt: serverTimestamp() });
+}

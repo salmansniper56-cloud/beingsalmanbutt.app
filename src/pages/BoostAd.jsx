@@ -36,7 +36,8 @@ export default function BoostAd() {
       if (url) window.location.href = url;
       else setError('Checkout not configured. Add Stripe and Cloud Function.');
     } catch (err) {
-      setError(err.message || 'Payment failed');
+      const msg = err.message || err.details?.message || 'Payment failed. Please try again.';
+      setError(msg);
     } finally {
       setPayLoading(false);
     }

@@ -6,7 +6,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { toggleLike, isLiked } from '../lib/firestore';
 import { getChatId, getOrCreateChat } from '../lib/firestore';
 import Layout from '../components/Layout';
+import AdImage from '../components/AdImage';
 import './AdDetail.css';
+
+function getAdImages(ad) {
+  const images = Array.isArray(ad?.images) ? ad.images : [];
+  return images.map((img) => (typeof img === 'string' ? img : img?.url)).filter(Boolean);
+}
 
 export default function AdDetail() {
   const { adId } = useParams();
@@ -56,13 +62,14 @@ export default function AdDetail() {
   if (loading) return <div className="app-loading">Loading…</div>;
   if (!ad) return <div className="ad-detail-missing">Ad not found.</div>;
 
-  const imageUrl = ad.images?.[0] || 'https://via.placeholder.com/800x400?text=No+image';
+  const imageUrls = getAdImages(ad);
+  const firstImageUrl = imageUrls[0] || 'https://via.placeholder.com/800x400?text=No+image';
   const isOwner = user?.uid === ad.createdBy;
 
   const content = (
     <div className="ad-detail">
       <div className="ad-detail-gallery">
-        <img src={imageUrl} alt={ad.title} />
+        <AdImage src={firstImageUrl} alt={ad.title} className="ad-detail-main-img" />
       </div>
       <div className="ad-detail-main">
         <h1>{ad.title}</h1>

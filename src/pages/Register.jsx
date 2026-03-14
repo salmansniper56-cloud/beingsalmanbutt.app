@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import './Auth.css';
 
 export default function Register() {
+  const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -41,6 +43,9 @@ export default function Register() {
 
   return (
     <div className="auth-page">
+      <button type="button" className="theme-toggle-auth" onClick={toggleTheme} aria-label="Toggle theme" title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
+        {theme === 'dark' ? '☀️' : '🌙'}
+      </button>
       <div className="auth-card">
         <h1>Create account</h1>
         <p className="auth-sub">Already have an account? <Link to="/login">Log in</Link></p>

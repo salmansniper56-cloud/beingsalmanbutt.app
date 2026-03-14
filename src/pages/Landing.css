@@ -6,6 +6,22 @@
   justify-content: center;
   padding: var(--space-5);
   text-align: center;
+  position: relative;
+}
+
+.theme-toggle-landing {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.theme-toggle-landing:hover {
+  opacity: 1;
 }
 
 .landing-header h1 {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createAd, createUserIfNeeded, updateAdImages } from '../lib/firestore';
 import { uploadAdImages } from '../lib/storage';
+import { compressImages } from '../lib/imageResize';
 import './CreateAd.css';
 
 const CATEGORIES = ['books', 'electronics', 'other'];
@@ -19,6 +20,7 @@ export default function CreateAd() {
   const [location, setLocation] = useState('');
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
   const [error, setError] = useState('');
 
   async function handleSubmit(e) {
@@ -27,6 +29,7 @@ export default function CreateAd() {
     setError('');
     setLoading(true);
     try {
+      setStatus('Posting ad…');
       await createUserIfNeeded(user.uid, {
         displayName: user.displayName || user.email?.split('@')[0],
         photoURL: user.photoURL || '',
@@ -45,7 +48,12 @@ export default function CreateAd() {
         likeCount: 0,
       });
       if (images.length > 0) {
-        const urls = await uploadAdImages(adId, images);
+        setStatus('Compressing images…');
+        const compressed = await compressImages(images);
+        setStatus('Uploading images…');
+        const urls = await uploadAdImages(adId, compressed, (current, total) => {
+          setStatus(`Uploading images (${current}/${total})…`);
+        });
         await updateAdImages(adId, urls);
       }
       navigate(`/ad/${adId}`);
@@ -53,6 +61,7 @@ export default function CreateAd() {
       setError(err.message || 'Failed to create ad');
     } finally {
       setLoading(false);
+      setStatus('');
     }
   }
 
@@ -102,7 +111,7 @@ export default function CreateAd() {
           </ul>
         )}
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Creating…' : 'Post ad'}
+          {loading ? (status || 'Creating…') : 'Post ad'}
         </button>
       </form>
     </div>

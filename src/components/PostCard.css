@@ -1,0 +1,124 @@
+.post-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-4);
+}
+
+.post-card-header {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.post-card-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: inherit;
+}
+
+.post-card-user:hover {
+  color: var(--color-primary);
+}
+
+.post-card-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.post-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.post-card-media {
+  background: var(--color-surface-elevated);
+}
+
+.post-card-img,
+.post-card-video {
+  width: 100%;
+  display: block;
+  max-height: 500px;
+  object-fit: contain;
+}
+
+.post-card-video {
+  max-height: 400px;
+}
+
+.post-card-body {
+  padding: var(--space-3);
+}
+
+.post-card-caption {
+  margin: 0 0 var(--space-2);
+  white-space: pre-wrap;
+  font-size: 0.95rem;
+}
+
+.post-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.post-card-like,
+.post-card-comment-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.post-card-like:hover,
+.post-card-like.is-liked {
+  color: var(--color-error);
+}
+
+.post-card-comment-btn:hover {
+  color: var(--color-primary);
+}
+
+.post-card-comments {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-3);
+}
+
+.post-card-comment-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-3);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.post-card-comment {
+  margin-bottom: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.post-card-comment-name {
+  font-weight: 600;
+  margin-right: var(--space-1);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.post-card-comment-form {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.post-card-comment-form input {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}

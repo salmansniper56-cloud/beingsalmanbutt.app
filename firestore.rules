@@ -31,5 +31,19 @@ service cloud.firestore {
     match /chats/{chatId}/messages/{msgId} {
       allow read, write: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
     }
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
+    }
+    match /posts/{postId}/likes/{likeId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    match /posts/{postId}/comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
   }
 }

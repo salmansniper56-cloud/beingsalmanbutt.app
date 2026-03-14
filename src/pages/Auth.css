@@ -4,6 +4,22 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+  position: relative;
+}
+
+.theme-toggle-auth {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.theme-toggle-auth:hover {
+  opacity: 1;
 }
 
 .auth-card {

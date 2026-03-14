@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getAds } from '../lib/firestore';
+import { getAds, getPosts, toggleLike, isLiked, togglePostLike, isPostLiked } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
-import { toggleLike, isLiked } from '../lib/firestore';
 import AdCard from '../components/AdCard';
+import PostCard from '../components/PostCard';
+import CreatePostModal from '../components/CreatePostModal';
 import './Feed.css';
 
 function rankAds(ads) {
@@ -24,34 +25,60 @@ function rankAds(ads) {
 
 export default function Feed() {
   const { user } = useAuth();
+  const [feedMode, setFeedMode] = useState('posts');
   const [ads, setAds] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState({});
+  const [postLiked, setPostLiked] = useState({});
   const [category, setCategory] = useState('');
+  const [createPostOpen, setCreatePostOpen] = useState(false);
 
   const loadAds = useCallback(async () => {
-    setLoading(true);
     try {
       const { ads: list } = await getAds({ limitCount: 50 });
       const filtered = category ? list.filter((a) => a.category === category) : list;
       setAds(rankAds(filtered));
       const likedMap = {};
-      await Promise.all(
-        list.slice(0, 30).map(async (ad) => {
-          if (user?.uid) likedMap[ad.id] = await isLiked(ad.id, user.uid);
-        })
-      );
+      if (user?.uid) {
+        await Promise.all(
+          list.slice(0, 30).map(async (ad) => {
+            likedMap[ad.id] = await isLiked(ad.id, user.uid);
+          })
+        );
+      }
       setLiked(likedMap);
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   }, [category, user?.uid]);
 
+  const loadPosts = useCallback(async () => {
+    try {
+      const { posts: list } = await getPosts({ limitCount: 50 });
+      setPosts(list);
+      const likedMap = {};
+      if (user?.uid) {
+        await Promise.all(
+          list.slice(0, 30).map(async (p) => {
+            likedMap[p.id] = await isPostLiked(p.id, user.uid);
+          })
+        );
+      }
+      setPostLiked(likedMap);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [user?.uid]);
+
   useEffect(() => {
-    loadAds();
-  }, [loadAds]);
+    setLoading(true);
+    if (feedMode === 'ads') {
+      loadAds().finally(() => setLoading(false));
+    } else {
+      loadPosts().finally(() => setLoading(false));
+    }
+  }, [feedMode, loadAds, loadPosts]);
 
   async function handleLike(adId) {
     if (!user?.uid) return;
@@ -68,19 +95,81 @@ export default function Feed() {
     }
   }
 
+  async function handlePostLike(postId) {
+    if (!user?.uid) return;
+    try {
+      await togglePostLike(postId, user.uid);
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, likeCount: (p.likeCount ?? 0) + (postLiked[postId] ? -1 : 1) } : p
+        )
+      );
+      setPostLiked((prev) => ({ ...prev, [postId]: !prev[postId] }));
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function onPostCreated() {
+    setCreatePostOpen(false);
+    loadPosts();
+  }
+
   return (
     <div className="feed">
       <div className="feed-toolbar">
         <h1>Feed</h1>
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">All</option>
-          <option value="books">Books</option>
-          <option value="electronics">Electronics</option>
-          <option value="other">Other</option>
-        </select>
+        <div className="feed-tabs">
+          <button
+            type="button"
+            className={`feed-tab ${feedMode === 'posts' ? 'active' : ''}`}
+            onClick={() => setFeedMode('posts')}
+          >
+            Posts
+          </button>
+          <button
+            type="button"
+            className={`feed-tab ${feedMode === 'ads' ? 'active' : ''}`}
+            onClick={() => setFeedMode('ads')}
+          >
+            Ads
+          </button>
+        </div>
+        {feedMode === 'posts' && (
+          <button type="button" className="btn btn-primary" onClick={() => setCreatePostOpen(true)}>
+            Add post
+          </button>
+        )}
+        {feedMode === 'ads' && (
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">All</option>
+            <option value="books">Books</option>
+            <option value="electronics">Electronics</option>
+            <option value="other">Other</option>
+          </select>
+        )}
       </div>
       {loading ? (
         <div className="empty-state"><div className="spinner" style={{ margin: '0 auto' }} aria-hidden="true" /></div>
+      ) : feedMode === 'posts' ? (
+        posts.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">📷</div>
+            <p>No posts yet. Share a photo or video!</p>
+            <button type="button" className="btn btn-primary" onClick={() => setCreatePostOpen(true)}>Add post</button>
+          </div>
+        ) : (
+          <div className="feed-posts">
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                isLiked={!!postLiked[post.id]}
+                onLike={() => handlePostLike(post.id)}
+              />
+            ))}
+          </div>
+        )
       ) : ads.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">📦</div>
@@ -100,6 +189,9 @@ export default function Feed() {
             />
           ))}
         </div>
+      )}
+      {createPostOpen && (
+        <CreatePostModal onClose={() => setCreatePostOpen(false)} onSuccess={onPostCreated} />
       )}
     </div>
   );
