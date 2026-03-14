@@ -1,0 +1,40 @@
+.profile-missing {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.profile-header {
+  text-align: center;
+  padding: var(--space-5) 0;
+  margin-bottom: var(--space-5);
+}
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: var(--space-3);
+}
+
+.profile-header h1 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.5rem;
+}
+
+.profile-bio {
+  color: var(--color-text-muted);
+  max-width: 400px;
+  margin: 0 auto var(--space-4);
+}
+
+.profile-ads h2 {
+  margin: 0 0 var(--space-4);
+  font-size: 1.25rem;
+}
+
+.profile-empty {
+  color: var(--color-text-muted);
+  padding: var(--space-4);
+}
