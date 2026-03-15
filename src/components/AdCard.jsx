@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import AdImage from './AdImage';
 import './AdCard.css';
 
-const PLACEHOLDER = 'https://via.placeholder.com/400x240?text=No+image';
+const PLACEHOLDER = 'https://placehold.co/400x240?text=No+image';
 
 function getFirstImageUrl(ad) {
   const images = Array.isArray(ad.images) ? ad.images : [];

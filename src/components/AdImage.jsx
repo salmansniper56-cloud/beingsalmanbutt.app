@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const PLACEHOLDER = 'https://via.placeholder.com/400x240?text=No+image';
+const PLACEHOLDER = 'https://placehold.co/400x240?text=No+image';
 
 export default function AdImage({ src, alt, className }) {
   const [error, setError] = useState(false);

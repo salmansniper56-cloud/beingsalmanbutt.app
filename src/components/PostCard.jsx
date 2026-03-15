@@ -6,7 +6,7 @@ import { getUser } from '../lib/firestore';
 import AdImage from './AdImage';
 import './PostCard.css';
 
-const PLACEHOLDER = 'https://via.placeholder.com/600x400?text=No+media';
+const PLACEHOLDER = 'https://placehold.co/600x400?text=No+media';
 
 export default function PostCard({ post, isLiked, onLike }) {
   const { user } = useAuth();
