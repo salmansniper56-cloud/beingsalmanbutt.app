@@ -5,6 +5,8 @@ import { uploadPostMedia } from '../lib/storage';
 import { compressImages } from '../lib/imageResize';
 import './CreatePostModal.css';
 
+const MAX_VIDEO_SECONDS = 60;
+
 export default function CreatePostModal({ onClose, onSuccess }) {
   const { user } = useAuth();
   const [file, setFile] = useState(null);
@@ -15,7 +17,28 @@ export default function CreatePostModal({ onClose, onSuccess }) {
 
   function onFileChange(e) {
     const f = e.target.files?.[0];
-    if (f) setFile(f);
+    if (!f) return;
+
+    if (f.type.startsWith('video/')) {
+      const url = URL.createObjectURL(f);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.src = url;
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        if (video.duration > MAX_VIDEO_SECONDS) {
+          setError(`Video must be ${MAX_VIDEO_SECONDS} seconds or less. Your video is ${Math.round(video.duration)}s.`);
+          setFile(null);
+          e.target.value = '';
+        } else {
+          setError('');
+          setFile(f);
+        }
+      };
+    } else {
+      setError('');
+      setFile(f);
+    }
   }
 
   async function handleSubmit(e) {
@@ -56,7 +79,7 @@ export default function CreatePostModal({ onClose, onSuccess }) {
         {error && <p className="create-post-error">{error}</p>}
         <form onSubmit={handleSubmit}>
           <div className="create-post-field">
-            <label>Photo or video</label>
+            <label>Photo or video <span style={{ fontSize: '11px', opacity: 0.5 }}>(max 60s for videos)</span></label>
             <input type="file" accept="image/*,video/*" onChange={onFileChange} required />
             {file && <p className="create-post-filename">{file.name}</p>}
           </div>
@@ -66,7 +89,7 @@ export default function CreatePostModal({ onClose, onSuccess }) {
           </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
+            <button type="submit" className="btn btn-primary" disabled={loading || !!error}>
               {loading ? status || 'Posting…' : 'Post'}
             </button>
           </div>
