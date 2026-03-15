@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createAd, createUserIfNeeded, updateAdImages } from '../lib/firestore';
 import { uploadAdImages } from '../lib/storage';
-import { compressImages } from '../lib/imageResize';
 import './CreateAd.css';
 
 const CATEGORIES = ['books', 'electronics', 'other'];

@@ -63,7 +63,7 @@ export default function AdDetail() {
   if (!ad) return <div className="ad-detail-missing">Ad not found.</div>;
 
   const imageUrls = getAdImages(ad);
-  const firstImageUrl = imageUrls[0] || 'https://via.placeholder.com/800x400?text=No+image';
+ const firstImageUrl = imageUrls[0] || 'https://placehold.co/800x400?text=No+image';
   const isOwner = user?.uid === ad.createdBy;
 
   const content = (
