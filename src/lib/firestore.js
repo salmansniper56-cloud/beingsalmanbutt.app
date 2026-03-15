@@ -308,3 +308,41 @@ export async function addComment(postId, { userId, userName, userPhotoURL, text 
   });
   await updateDoc(postRef, { commentCount: currentCount + 1, updatedAt: serverTimestamp() });
 }
+
+// ---------- Search ----------
+export async function searchAds(queryText) {
+  if (!queryText?.trim()) return [];
+  const q = query(
+    collection(db, 'ads'),
+    orderBy('title'),
+    limit(20)
+  );
+  const snap = await getDocs(q);
+  const lower = queryText.toLowerCase();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((ad) =>
+      ad.title?.toLowerCase().includes(lower) ||
+      ad.description?.toLowerCase().includes(lower) ||
+      ad.category?.toLowerCase().includes(lower)
+    )
+    .slice(0, 5);
+}
+
+export async function searchUsers(queryText) {
+  if (!queryText?.trim()) return [];
+  const q = query(
+    collection(db, 'users'),
+    orderBy('displayName'),
+    limit(20)
+  );
+  const snap = await getDocs(q);
+  const lower = queryText.toLowerCase();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((u) =>
+      u.displayName?.toLowerCase().includes(lower) ||
+      u.email?.toLowerCase().includes(lower)
+    )
+    .slice(0, 3);
+}
