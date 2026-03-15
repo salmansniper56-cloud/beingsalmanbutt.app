@@ -6,6 +6,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -65,7 +66,6 @@ export async function getAds(opts = {}) {
   const { limitCount = 50, lastDoc } = opts;
   let q = query(
     collection(db, 'ads'),
-    where('status', '==', 'active'),
     orderBy('createdAt', 'desc'),
     limit(limitCount)
   );
@@ -253,6 +253,11 @@ export async function getPosts(opts = {}) {
     };
   });
   return { posts, lastDoc: snap.docs[snap.docs.length - 1] };
+}
+
+export async function deletePost(postId) {
+  const ref = doc(db, 'posts', postId);
+  await deleteDoc(ref);
 }
 
 export async function togglePostLike(postId, uid) {
