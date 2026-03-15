@@ -1,31 +1,51 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getComments, addComment } from '../lib/firestore';
+import { getComments, addComment, deletePost } from '../lib/firestore';
 import { getUser } from '../lib/firestore';
 import AdImage from './AdImage';
 import './PostCard.css';
 
 const PLACEHOLDER = 'https://placehold.co/600x400?text=No+media';
 
-export default function PostCard({ post, isLiked, onLike }) {
+export default function PostCard({ post, isLiked, onLike, onDelete }) {
   const { user } = useAuth();
   const [creator, setCreator] = useState(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const isOwner = user?.uid === post?.createdBy;
 
   useEffect(() => {
-    if (post?.createdBy) {
-      getUser(post.createdBy).then(setCreator);
-    }
+    if (post?.createdBy) getUser(post.createdBy).then(setCreator);
   }, [post?.createdBy]);
 
   useEffect(() => {
     if (!commentsOpen || !post?.id) return;
     getComments(post.id).then(setComments);
   }, [commentsOpen, post?.id]);
+
+  useEffect(() => {
+    function handleClick() { setMenuOpen(false); }
+    if (menuOpen) document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [menuOpen]);
+
+  async function handleDelete() {
+    if (!window.confirm('Delete this post?')) return;
+    setDeleting(true);
+    try {
+      await deletePost(post.id);
+      onDelete?.(post.id);
+    } catch (err) {
+      console.error(err);
+      setDeleting(false);
+    }
+  }
 
   async function handleAddComment(e) {
     e.preventDefault();
@@ -54,6 +74,8 @@ export default function PostCard({ post, isLiked, onLike }) {
   const creatorName = creator?.displayName || 'User';
   const creatorPhoto = creator?.photoURL || `https://ui-avatars.com/api?name=${encodeURIComponent(creatorName)}`;
 
+  if (deleting) return null;
+
   return (
     <article className="post-card">
       <header className="post-card-header">
@@ -61,6 +83,29 @@ export default function PostCard({ post, isLiked, onLike }) {
           <img src={creatorPhoto} alt="" className="post-card-avatar" />
           <span className="post-card-name">{creatorName}</span>
         </Link>
+        {isOwner && (
+          <div className="post-card-menu-wrap" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="post-card-menu-btn"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label="Post options"
+            >
+              •••
+            </button>
+            {menuOpen && (
+              <div className="post-card-menu">
+                <button
+                  type="button"
+                  className="post-card-menu-item delete"
+                  onClick={handleDelete}
+                >
+                  🗑️ Delete post
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </header>
       <div className="post-card-media">
         {firstUrl ? (
