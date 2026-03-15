@@ -47,15 +47,13 @@ export default function CreateAd() {
         status: 'active',
         likeCount: 0,
       });
-      if (images.length > 0) {
-        setStatus('Compressing images…');
-        const compressed = await compressImages(images);
-        setStatus('Uploading images…');
-        const urls = await uploadAdImages(adId, compressed, (current, total) => {
-          setStatus(`Uploading images (${current}/${total})…`);
-        });
-        await updateAdImages(adId, urls);
-      }
+     if (images.length > 0) {
+  setStatus('Uploading images…');
+  const urls = await uploadAdImages(adId, images, (current, total) => {
+    setStatus(`Uploading images (${current}/${total})…`);
+  });
+  await updateAdImages(adId, urls);
+}
       navigate(`/ad/${adId}`);
     } catch (err) {
       setError(err.message || 'Failed to create ad');
