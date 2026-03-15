@@ -1,68 +1,179 @@
+.feed {
+  width: 100%;
+}
+
 .feed-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .feed-toolbar h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 20px;
+  font-weight: 600;
+  color: #f0eff8;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: -0.3px;
 }
 
 .feed-tabs {
   display: flex;
   gap: 0;
+  background: #11111e;
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 3px;
 }
 
 .feed-tab {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-elevated);
-  color: var(--color-text-muted);
-  font-weight: 500;
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: rgba(240,239,248,0.45);
+  font-weight: 400;
+  font-size: 13px;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: 6px;
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
 }
 
-.feed-tab:first-child {
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-}
-
-.feed-tab:last-child {
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  border-left: none;
+.feed-tab:hover {
+  color: rgba(240,239,248,0.8);
+  background: rgba(255,255,255,0.04);
 }
 
 .feed-tab.active {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
+  background: rgba(124,111,247,0.2);
+  color: #a99ff9;
+  font-weight: 500;
+}
+
+.feed-filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.feed-filter {
+  font-size: 12px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 0.5px solid rgba(255,255,255,0.1);
+  color: rgba(240,239,248,0.5);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.feed-filter:hover {
+  border-color: rgba(124,111,247,0.4);
+  color: rgba(240,239,248,0.8);
+}
+
+.feed-filter.active {
+  background: rgba(124,111,247,0.15);
+  border-color: rgba(124,111,247,0.4);
+  color: #a99ff9;
 }
 
 .feed-toolbar select {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
+  padding: 7px 12px;
+  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  background: #11111e;
+  color: rgba(240,239,248,0.7);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  cursor: pointer;
 }
 
-.feed-posts {
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.feed-loading,
-.feed-empty {
-  text-align: center;
-  color: var(--color-text-muted);
-  padding: var(--space-6);
+.feed-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(240,239,248,0.35);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  font-family: 'Syne', sans-serif;
 }
 
 .feed-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.feed-posts {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: rgba(240,239,248,0.35);
+  gap: 12px;
+}
+
+.empty-state-icon {
+  font-size: 40px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 14px;
+  margin: 0;
+  color: rgba(240,239,248,0.4);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(124,111,247,0.2);
+  border-top-color: #7c6ff7;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  text-decoration: none;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: #7c6ff7;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #6b5ef5;
+  transform: translateY(-1px);
 }

@@ -1,85 +1,149 @@
 .ad-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
+  background: #11111e;
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
 }
 
 .ad-card:hover {
-  box-shadow: var(--shadow-md);
+  border-color: rgba(124,111,247,0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
 
 .ad-card-image-wrap {
-  display: block;
   position: relative;
-  aspect-ratio: 16/10;
+  display: block;
+  height: 160px;
   overflow: hidden;
+  background: #181828;
 }
 
 .ad-card-image-wrap img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.ad-card:hover .ad-card-image-wrap img {
+  transform: scale(1.04);
 }
 
 .ad-card-boost {
   position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  background: var(--color-primary);
-  color: white;
-  font-size: 0.75rem;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
+  top: 8px;
+  right: 8px;
+  background: #fbbf24;
+  color: #412402;
+  font-size: 9px;
   font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.3px;
 }
 
 .ad-card-body {
-  padding: var(--space-3);
+  padding: 12px 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .ad-card-title {
-  margin: 0 0 var(--space-1);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text);
-  text-decoration: none;
-  display: block;
-}
-
-.ad-card-title:hover {
-  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 500;
+  color: #f0eff8;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .ad-card-price {
-  margin: 0 0 var(--space-2);
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: #7c6ff7;
+  font-family: 'Syne', sans-serif;
+  margin: 0;
+}
+
+.ad-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.ad-card-condition {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.ad-card-condition.like-new {
+  background: rgba(74,222,128,0.15);
+  color: #4ade80;
+}
+
+.ad-card-condition.good {
+  background: rgba(124,111,247,0.15);
+  color: #a99ff9;
+}
+
+.ad-card-condition.fair {
+  background: rgba(251,191,36,0.15);
+  color: #fbbf24;
+}
+
+.ad-card-condition.used {
+  background: rgba(248,113,113,0.15);
+  color: #f87171;
 }
 
 .ad-card-seller {
-  font-size: 0.875rem;
-  margin-bottom: var(--space-2);
-  display: inline-block;
+  font-size: 11px;
+  color: rgba(240,239,248,0.4);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.ad-card-seller:hover {
+  color: #7c6ff7;
 }
 
 .ad-card-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .ad-card-like {
   background: none;
   border: none;
-  padding: 0;
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
+  font-size: 12px;
+  color: rgba(240,239,248,0.35);
   cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+  font-family: 'DM Sans', sans-serif;
 }
 
-.ad-card-like:hover,
+.ad-card-like:hover {
+  color: #f472b6;
+}
+
 .ad-card-like.is-liked {
-  color: var(--color-error);
+  color: #f472b6;
 }
