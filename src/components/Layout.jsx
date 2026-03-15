@@ -1,6 +1,8 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { getAdsByUser, getChatsForUser, getUser } from '../lib/firestore';
 import './Layout.css';
 
 export default function Layout({ children }) {
@@ -8,6 +10,30 @@ export default function Layout({ children }) {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [stats, setStats] = useState({ ads: 0, messages: 0, followers: 0, likes: 0 });
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    async function loadStats() {
+      try {
+        const [ads, chats, userData] = await Promise.all([
+          getAdsByUser(user.uid),
+          getChatsForUser(user.uid),
+          getUser(user.uid),
+        ]);
+        const totalLikes = ads.reduce((sum, ad) => sum + (ad.likeCount ?? 0), 0);
+        setStats({
+          ads: ads.length,
+          messages: chats.length,
+          followers: userData?.followerCount ?? 0,
+          likes: totalLikes,
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    loadStats();
+  }, [user?.uid]);
 
   function handleSignOut() {
     signOut();
@@ -63,7 +89,7 @@ export default function Layout({ children }) {
           <Link to="/messages" className={`sidebar-item ${isActive('/messages')}`}>
             <span className="sidebar-dot" />
             Messages
-            <span className="sidebar-badge">·</span>
+            {stats.messages > 0 && <span className="sidebar-badge">{stats.messages}</span>}
           </Link>
           <Link to={`/profile/${user?.uid}`} className={`sidebar-item ${isActive('/profile')}`}>
             <span className="sidebar-dot" />
@@ -101,49 +127,21 @@ export default function Layout({ children }) {
           <div className="right-title">Your stats</div>
           <div className="stat-grid">
             <div className="stat-card">
-              <div className="stat-num">7</div>
+              <div className="stat-num">{stats.ads}</div>
               <div className="stat-label">Active ads</div>
             </div>
             <div className="stat-card">
-              <div className="stat-num">34</div>
+              <div className="stat-num">{stats.likes}</div>
               <div className="stat-label">Likes</div>
             </div>
             <div className="stat-card">
-              <div className="stat-num">12</div>
+              <div className="stat-num">{stats.messages}</div>
               <div className="stat-label">Messages</div>
             </div>
             <div className="stat-card">
-              <div className="stat-num">5</div>
+              <div className="stat-num">{stats.followers}</div>
               <div className="stat-label">Followers</div>
             </div>
-          </div>
-
-          <hr className="right-divider" />
-
-          <div className="right-title">People to follow</div>
-          <div className="people-item">
-            <div className="people-avatar" style={{ background: 'linear-gradient(135deg,#7c6ff7,#534AB7)' }}>A</div>
-            <div>
-              <div className="people-name">Ahmad Raza</div>
-              <div className="people-sub">12 ads</div>
-            </div>
-            <button className="follow-btn">Follow</button>
-          </div>
-          <div className="people-item">
-            <div className="people-avatar" style={{ background: 'linear-gradient(135deg,#1D9E75,#0F6E56)' }}>F</div>
-            <div>
-              <div className="people-name">Fatima Khan</div>
-              <div className="people-sub">8 ads</div>
-            </div>
-            <button className="follow-btn">Follow</button>
-          </div>
-          <div className="people-item">
-            <div className="people-avatar" style={{ background: 'linear-gradient(135deg,#185FA5,#0C447C)' }}>Z</div>
-            <div>
-              <div className="people-name">Zain Butt</div>
-              <div className="people-sub">5 ads</div>
-            </div>
-            <button className="follow-btn">Follow</button>
           </div>
 
           <hr className="right-divider" />
