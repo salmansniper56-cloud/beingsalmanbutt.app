@@ -25,7 +25,6 @@ export default function StudentVerifyModal({ onVerified }) {
   const [error, setError] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
 
-  // Admin bypass — skip verification safely inside useEffect
   useEffect(() => {
     if (user?.uid === ADMIN_UID) {
       onVerified();
@@ -47,9 +46,7 @@ export default function StudentVerifyModal({ onVerified }) {
   const sendOTP = async (e) => {
     e?.preventDefault();
     setError('');
-    if (!eduEmail.trim()) {
-      setError('Please enter your university email.'); return;
-    }
+    if (!eduEmail.trim()) { setError('Please enter your university email.'); return; }
     if (!eduEmail.toLowerCase().endsWith('.edu.pk')) {
       setError('Only .edu.pk university emails are accepted.'); return;
     }
@@ -60,19 +57,13 @@ export default function StudentVerifyModal({ onVerified }) {
       await emailjs.send(
         EMAILJS_SERVICE_ID,
         EMAILJS_TEMPLATE_ID,
-        {
-          to_email: eduEmail,
-          to_name: user?.displayName || 'Student',
-          otp_code: code,
-          site_name: 'CampusKart',
-        },
+        { to_email: eduEmail, to_name: user?.displayName || 'Student', otp_code: code, site_name: 'CampusKart' },
         EMAILJS_PUBLIC_KEY
       );
       setStep('otp');
       startResendTimer();
     } catch (err) {
       setError('Failed to send OTP. Please try again.');
-      console.error(err);
     } finally {
       setSending(false);
     }
@@ -94,7 +85,6 @@ export default function StudentVerifyModal({ onVerified }) {
       onVerified();
     } catch (err) {
       setError('Verification failed. Please try again.');
-      console.error(err);
     } finally {
       setVerifying(false);
     }
@@ -104,40 +94,56 @@ export default function StudentVerifyModal({ onVerified }) {
     <div className="svm-overlay">
       <div className="svm-modal">
 
-        <div className="svm-header">
-          <div className="svm-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3L2 9l10 6 10-6-10-6z" fill="#534AB7"/>
-              <path d="M2 9v6c0 3.31 4.48 6 10 6s10-2.69 10-6V9" stroke="#534AB7" strokeWidth="1.5" fill="none"/>
+        {/* Decorative top bar */}
+        <div className="svm-topbar" />
+
+        {/* Badge */}
+        <div className="svm-badge-wrap">
+          <span className="svm-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3L2 9l10 6 10-6-10-6z" fill="#fff"/>
+              <path d="M2 9v6c0 3.31 4.48 6 10 6s10-2.69 10-6V9" stroke="#fff" strokeWidth="1.5" fill="none"/>
             </svg>
-          </div>
-          <div>
-            <h2 className="svm-title">Student Verification</h2>
-            <p className="svm-subtitle">One-time check — never asked again</p>
-          </div>
+            CampusKart
+          </span>
         </div>
 
+        {/* Title */}
+        <div className="svm-title-block">
+          <h2 className="svm-title">
+            {step === 'email' ? 'Verify your student identity' : 'Check your inbox'}
+          </h2>
+          <p className="svm-subtitle">
+            {step === 'email'
+              ? 'Enter your university email to unlock free notes — one time only.'
+              : `We sent a 6-digit code to ${eduEmail}`}
+          </p>
+        </div>
+
+        {/* Step pills */}
         <div className="svm-steps">
-          <div className={`svm-step ${step === 'email' ? 'active' : 'done'}`}>
-            <div className="svm-step-dot">{step === 'otp' ? '✓' : '1'}</div>
-            <span>University email</span>
+          <div className={`svm-pill ${step === 'email' ? 'active' : 'done'}`}>
+            <span>{step === 'otp' ? '✓' : '1'}</span> University email
           </div>
-          <div className="svm-step-line" />
-          <div className={`svm-step ${step === 'otp' ? 'active' : ''}`}>
-            <div className="svm-step-dot">2</div>
-            <span>Enter OTP</span>
+          <div className="svm-pill-divider">→</div>
+          <div className={`svm-pill ${step === 'otp' ? 'active' : ''}`}>
+            <span>2</span> Enter OTP
           </div>
         </div>
 
+        {/* Step 1 */}
         {step === 'email' && (
           <form onSubmit={sendOTP} className="svm-form">
-            <p className="svm-desc">
-              Enter your university email ending in <strong>.edu.pk</strong> — we'll send a 6-digit verification code.
-            </p>
-            <div className="svm-field">
-              <label>University email</label>
+            <div className="svm-input-wrap">
+              <div className="svm-input-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </div>
               <input
                 type="email"
+                className="svm-input"
                 placeholder="yourname@university.edu.pk"
                 value={eduEmail}
                 onChange={e => setEduEmail(e.target.value)}
@@ -146,41 +152,50 @@ export default function StudentVerifyModal({ onVerified }) {
             </div>
             {error && <div className="svm-error">{error}</div>}
             <button type="submit" className="svm-btn" disabled={sending}>
-              {sending ? 'Sending code...' : 'Send verification code →'}
+              {sending ? (
+                <span className="svm-btn-loading">
+                  <span className="svm-spinner" /> Sending code...
+                </span>
+              ) : 'Send verification code →'}
             </button>
+            <p className="svm-hint">Only .edu.pk university emails are accepted</p>
           </form>
         )}
 
+        {/* Step 2 */}
         {step === 'otp' && (
           <form onSubmit={verifyOTP} className="svm-form">
-            <p className="svm-desc">
-              We sent a 6-digit code to <strong>{eduEmail}</strong>. Check your inbox and enter it below.
-            </p>
-            <div className="svm-field">
-              <label>6-digit code</label>
+            <div className="svm-otp-boxes">
+              {[0,1,2,3,4,5].map(i => (
+                <div key={i} className={`svm-otp-box ${otp[i] ? 'filled' : ''}`}>
+                  {otp[i] || ''}
+                </div>
+              ))}
               <input
                 type="text"
-                placeholder="_ _ _ _ _ _"
+                className="svm-otp-hidden"
                 value={otp}
                 onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 maxLength={6}
                 autoFocus
-                className="svm-otp-input"
               />
             </div>
             {error && <div className="svm-error">{error}</div>}
             <button type="submit" className="svm-btn" disabled={verifying || otp.length !== 6}>
-              {verifying ? 'Verifying...' : 'Verify & unlock notes →'}
+              {verifying ? (
+                <span className="svm-btn-loading">
+                  <span className="svm-spinner" /> Verifying...
+                </span>
+              ) : 'Unlock notes →'}
             </button>
             <div className="svm-resend">
               {resendTimer > 0 ? (
-                <span>Resend code in {resendTimer}s</span>
+                <span>Resend in {resendTimer}s</span>
               ) : (
-                <button type="button" className="svm-resend-btn" onClick={sendOTP}>
-                  Resend code
-                </button>
+                <button type="button" className="svm-link" onClick={sendOTP}>Resend code</button>
               )}
-              <button type="button" className="svm-resend-btn" onClick={() => { setStep('email'); setOtp(''); setError(''); }}>
+              <span className="svm-dot">·</span>
+              <button type="button" className="svm-link" onClick={() => { setStep('email'); setOtp(''); setError(''); }}>
                 Change email
               </button>
             </div>
@@ -188,7 +203,7 @@ export default function StudentVerifyModal({ onVerified }) {
         )}
 
         <p className="svm-footer">
-          Your university email is only used for verification and never shared.
+          🔒 Your university email is only used for verification and never shared.
         </p>
       </div>
     </div>
