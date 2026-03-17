@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import ProfileGuard from './components/ProfileGuard';
+import AIChat from './components/AIChat';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -40,75 +41,79 @@ function PublicOnlyRoute({ children }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route
-        path="/login"
-        element={
-          <PublicOnlyRoute>
-            <Login />
-          </PublicOnlyRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicOnlyRoute>
-            <Register />
-          </PublicOnlyRoute>
-        }
-      />
-      <Route
-        path="/onboarding"
-        element={
-          <ProtectedRoute withLayout={false}>
-            <Onboarding />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/feed"
-        element={
-          <ProtectedRoute>
-            <Feed />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/ad/:adId" element={<AdDetail />} />
-      <Route
-        path="/ad/create"
-        element={
-          <ProtectedRoute>
-            <CreateAd />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ad/:adId/boost"
-        element={
-          <ProtectedRoute>
-            <BoostAd />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/profile/:uid" element={<Profile />} />
-      <Route
-        path="/messages"
-        element={
-          <ProtectedRoute>
-            <ChatList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/messages/:chatId"
-        element={
-          <ProtectedRoute>
-            <ChatThread />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicOnlyRoute>
+              <Register />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute withLayout={false}>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/feed"
+          element={
+            <ProtectedRoute>
+              <Feed />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/ad/:adId" element={<AdDetail />} />
+        <Route
+          path="/ad/create"
+          element={
+            <ProtectedRoute>
+              <CreateAd />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ad/:adId/boost"
+          element={
+            <ProtectedRoute>
+              <BoostAd />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/profile/:uid" element={<Profile />} />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <ChatList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages/:chatId"
+          element={
+            <ProtectedRoute>
+              <ChatThread />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      <AIChat />
+    </>
   );
 }
