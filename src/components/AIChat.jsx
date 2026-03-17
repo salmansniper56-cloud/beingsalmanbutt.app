@@ -2,10 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import "./AIChat.css";
 
 const MODELS = [
-  { value: "gpt-4o",           label: "GPT-4o",        badge: "Smart",     limit: "30/day" },
-  { value: "gpt-4o-mini",      label: "GPT-4o Mini",   badge: "Fast",      limit: "200/day" },
-  { value: "deepseek-r1",      label: "DeepSeek R1",   badge: "Reasoning", limit: "30/day" },
-  { value: "deepseek-v3",      label: "DeepSeek V3",   badge: "Balanced",  limit: "30/day" },
+  { value: "claude-haiku-4-5-20251001", label: "Claude Haiku", badge: "Fast",    color: "haiku" },
+  { value: "claude-sonnet-4-6",         label: "Claude Sonnet", badge: "Smart",   color: "sonnet" },
 ];
 
 const SYSTEM_PROMPT = `You are CampusKart AI — a friendly, knowledgeable study assistant for Pakistani university students.
@@ -17,19 +15,16 @@ Help students with:
 Keep answers clear, concise, and student-friendly. Use simple English.`;
 
 export default function AIChat() {
-  const [open, setOpen] = useState(false);
-  const [model, setModel] = useState("gpt-4o");
+  const [open, setOpen]       = useState(false);
+  const [model, setModel]     = useState("claude-haiku-4-5-20251001");
   const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: "Hi! I'm your campus study assistant. Ask me anything — concepts, exam prep, book recommendations, or how to use CampusKart.",
-    },
+    { role: "assistant", content: "Hi! I'm your campus study assistant powered by Claude AI. Ask me anything — concepts, exam prep, book recommendations, or how to use CampusKart." },
   ]);
-  const [input, setInput] = useState("");
+  const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
-  const [hasNew, setHasNew] = useState(true);
+  const [hasNew, setHasNew]   = useState(true);
   const msgsEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const inputRef   = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -39,7 +34,7 @@ export default function AIChat() {
   }, [messages, open]);
 
   const handleOpen = () => {
-    setOpen((v) => !v);
+    setOpen(v => !v);
     setHasNew(false);
   };
 
@@ -47,38 +42,46 @@ export default function AIChat() {
     const text = input.trim();
     if (!text || loading) return;
 
-    const userMsg = { role: "user", content: text };
+    const userMsg    = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch("https://free.yunwu.ai/v1/chat/completions", {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_AI_API_KEY}`,
+          "Content-Type":         "application/json",
+          "x-api-key":            import.meta.env.VITE_CLAUDE_API_KEY,
+          "anthropic-version":    "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify({
           model,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...newMessages,
-          ],
-          max_tokens: 600,
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: newMessages.map(m => ({
+            role:    m.role === "assistant" ? "assistant" : "user",
+            content: m.content,
+          })),
         }),
       });
 
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content || "Sorry, I couldn't get a response. Please try again.";
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData?.error?.message || `Error ${res.status}`);
+      }
+
+      const data  = await res.json();
+      const reply = data.content?.[0]?.text || "Sorry, I couldn't get a response.";
+      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Oops! Something went wrong. Check your connection and try again." },
-      ]);
+      console.error("Claude API error:", err);
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: `Error: ${err.message || "Something went wrong. Please try again."}`,
+      }]);
     } finally {
       setLoading(false);
     }
@@ -92,15 +95,10 @@ export default function AIChat() {
   };
 
   const clearChat = () => {
-    setMessages([
-      {
-        role: "assistant",
-        content: "Chat cleared! Ask me anything.",
-      },
-    ]);
+    setMessages([{ role: "assistant", content: "Chat cleared! Ask me anything." }]);
   };
 
-  const selectedModel = MODELS.find((m) => m.value === model);
+  const selectedModel = MODELS.find(m => m.value === model);
 
   return (
     <div className="aichat-root">
@@ -116,7 +114,7 @@ export default function AIChat() {
             </div>
             <div style={{ flex: 1 }}>
               <div className="aichat-header-title">CampusKart AI</div>
-              <div className="aichat-header-sub">Study assistant · always here</div>
+              <div className="aichat-header-sub">Powered by Claude · always here</div>
             </div>
             <button className="aichat-icon-btn" onClick={clearChat} title="Clear chat">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -136,15 +134,13 @@ export default function AIChat() {
             <select
               className="aichat-model-select"
               value={model}
-              onChange={(e) => setModel(e.target.value)}
+              onChange={e => setModel(e.target.value)}
             >
-              {MODELS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label} ({m.limit})
-                </option>
+              {MODELS.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
               ))}
             </select>
-            <span className={`aichat-badge aichat-badge-${selectedModel?.value}`}>
+            <span className={`aichat-badge aichat-badge-${selectedModel?.color}`}>
               {selectedModel?.badge}
             </span>
           </div>
@@ -181,7 +177,7 @@ export default function AIChat() {
               className="aichat-input"
               placeholder="Ask anything..."
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
               rows={1}
               disabled={loading}
@@ -197,7 +193,7 @@ export default function AIChat() {
               </svg>
             </button>
           </div>
-          <div className="aichat-powered">Powered by GPT-4o · DeepSeek · yunwu.ai</div>
+          <div className="aichat-powered">Powered by Anthropic Claude</div>
         </div>
       )}
 

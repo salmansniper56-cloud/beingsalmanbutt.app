@@ -6,7 +6,6 @@
   font-family: 'DM Sans', sans-serif;
 }
 
-/* Floating bubble */
 .aichat-bubble {
   width: 54px;
   height: 54px;
@@ -40,7 +39,6 @@
   justify-content: center;
 }
 
-/* Panel */
 .aichat-panel {
   position: absolute;
   bottom: 66px;
@@ -60,7 +58,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Header */
 .aichat-header {
   background: #534AB7;
   padding: 12px 14px;
@@ -93,7 +90,6 @@
 }
 .aichat-icon-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
-/* Model bar */
 .aichat-modelbar {
   display: flex;
   align-items: center;
@@ -102,7 +98,7 @@
   border-bottom: 0.5px solid #f0f0f0;
   background: #fafafa;
 }
-.aichat-model-label  { font-size: 11px; color: #888; white-space: nowrap; }
+.aichat-model-label { font-size: 11px; color: #888; white-space: nowrap; }
 .aichat-model-select {
   font-size: 12px;
   padding: 4px 8px;
@@ -123,12 +119,9 @@
   font-weight: 600;
   white-space: nowrap;
 }
-.aichat-badge-gpt-4o       { background: #EEEDFE; color: #3C3489; }
-.aichat-badge-gpt-4o-mini  { background: #EAF3DE; color: #27500A; }
-.aichat-badge-deepseek-r1  { background: #FAECE7; color: #712B13; }
-.aichat-badge-deepseek-v3  { background: #E6F1FB; color: #0C447C; }
+.aichat-badge-haiku  { background: #EAF3DE; color: #27500A; }
+.aichat-badge-sonnet { background: #EEEDFE; color: #3C3489; }
 
-/* Messages */
 .aichat-messages {
   flex: 1;
   height: 260px;
@@ -154,7 +147,6 @@
 .aichat-msg-ai   { background: #f4f4f5; color: #111; border-bottom-left-radius: 3px; }
 .aichat-msg-user { background: #534AB7; color: #EEEDFE; border-bottom-right-radius: 3px; }
 
-/* Typing dots */
 .aichat-typing { display: flex; gap: 4px; align-items: center; padding: 2px 4px; }
 .aichat-typing span {
   width: 6px; height: 6px; border-radius: 50%;
@@ -168,7 +160,6 @@
   40%          { opacity: 1; }
 }
 
-/* Input */
 .aichat-input-area {
   display: flex;
   gap: 8px;
@@ -193,7 +184,7 @@
   line-height: 1.4;
   transition: border-color 0.15s;
 }
-.aichat-input:focus { border-color: #534AB7; background: #fff; }
+.aichat-input:focus    { border-color: #534AB7; background: #fff; }
 .aichat-input:disabled { opacity: 0.6; }
 
 .aichat-send-btn {
@@ -220,7 +211,6 @@
   background: #fff;
 }
 
-/* Mobile */
 @media (max-width: 480px) {
   .aichat-panel { width: calc(100vw - 32px); right: 0; }
   .aichat-root  { bottom: 16px; right: 16px; }
