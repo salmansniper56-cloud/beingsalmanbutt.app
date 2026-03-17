@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import './AdminUploadNotes.css';
 
-// ← Put your Firebase UID here (find it in Firebase Console → Authentication)
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
 const SUBJECTS = [
@@ -40,7 +39,6 @@ export default function AdminUploadNotes() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // Block non-admins
   if (!user || user.uid !== ADMIN_UID) {
     return <Navigate to="/" replace />;
   }

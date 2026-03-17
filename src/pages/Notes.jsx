@@ -56,7 +56,6 @@ export default function Notes() {
 
   return (
     <div className="notes-page">
-      {/* Hero */}
       <div className="notes-hero">
         <div className="notes-hero-inner">
           <span className="notes-hero-tag">Free Study Resources</span>
@@ -79,7 +78,6 @@ export default function Notes() {
       </div>
 
       <div className="notes-body">
-        {/* Subject filters */}
         <div className="notes-filters">
           {SUBJECTS.map(s => (
             <button
@@ -93,7 +91,6 @@ export default function Notes() {
           ))}
         </div>
 
-        {/* Stats bar */}
         <div className="notes-stats">
           <span>{filtered.length} notes available</span>
           {activeSubject !== 'All' && (
@@ -101,7 +98,6 @@ export default function Notes() {
           )}
         </div>
 
-        {/* Grid */}
         {loading ? (
           <div className="notes-loading">
             {[1,2,3,4,5,6].map(i => <div key={i} className="notes-skeleton" />)}
