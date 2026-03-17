@@ -3,6 +3,8 @@ import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import ProfileGuard from './components/ProfileGuard';
 import AIChat from './components/AIChat';
+import Notes from './pages/Notes';
+import AdminUploadNotes from './pages/AdminUploadNotes';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -110,6 +112,20 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Notes — public, no login required */}
+        <Route path="/notes" element={<Notes />} />
+
+        {/* Admin only — upload notes */}
+        <Route
+          path="/admin/upload-notes"
+          element={
+            <ProtectedRoute withLayout={false}>
+              <AdminUploadNotes />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
