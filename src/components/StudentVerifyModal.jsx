@@ -57,12 +57,17 @@ export default function StudentVerifyModal({ onVerified }) {
       await emailjs.send(
         EMAILJS_SERVICE_ID,
         EMAILJS_TEMPLATE_ID,
-        { to_email: eduEmail, to_name: user?.displayName || 'Student', otp_code: code, site_name: 'CampusKart' },
+        {
+          email: eduEmail,
+          passcode: code,
+          time: new Date().toLocaleTimeString(),
+        },
         EMAILJS_PUBLIC_KEY
       );
       setStep('otp');
       startResendTimer();
     } catch (err) {
+      console.error('EmailJS error:', err);
       setError('Failed to send OTP. Please try again.');
     } finally {
       setSending(false);
@@ -94,10 +99,8 @@ export default function StudentVerifyModal({ onVerified }) {
     <div className="svm-overlay">
       <div className="svm-modal">
 
-        {/* Decorative top bar */}
         <div className="svm-topbar" />
 
-        {/* Badge */}
         <div className="svm-badge-wrap">
           <span className="svm-badge">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
@@ -108,7 +111,6 @@ export default function StudentVerifyModal({ onVerified }) {
           </span>
         </div>
 
-        {/* Title */}
         <div className="svm-title-block">
           <h2 className="svm-title">
             {step === 'email' ? 'Verify your student identity' : 'Check your inbox'}
@@ -120,7 +122,6 @@ export default function StudentVerifyModal({ onVerified }) {
           </p>
         </div>
 
-        {/* Step pills */}
         <div className="svm-steps">
           <div className={`svm-pill ${step === 'email' ? 'active' : 'done'}`}>
             <span>{step === 'otp' ? '✓' : '1'}</span> University email
@@ -131,7 +132,6 @@ export default function StudentVerifyModal({ onVerified }) {
           </div>
         </div>
 
-        {/* Step 1 */}
         {step === 'email' && (
           <form onSubmit={sendOTP} className="svm-form">
             <div className="svm-input-wrap">
@@ -162,7 +162,6 @@ export default function StudentVerifyModal({ onVerified }) {
           </form>
         )}
 
-        {/* Step 2 */}
         {step === 'otp' && (
           <form onSubmit={verifyOTP} className="svm-form">
             <div className="svm-otp-boxes">
