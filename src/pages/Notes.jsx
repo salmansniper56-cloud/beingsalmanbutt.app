@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
+import StudentVerifyModal from '../components/StudentVerifyModal';
 import './Notes.css';
 
 const SUBJECTS = [
@@ -25,11 +28,33 @@ const SUBJECT_ICONS = {
 };
 
 export default function Notes() {
+  const { user } = useAuth();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeSubject, setActiveSubject] = useState('All');
+  const [isVerified, setIsVerified] = useState(false);
+  const [checkingVerification, setCheckingVerification] = useState(true);
 
+  // Check if user is already verified
+  useEffect(() => {
+    const checkVerification = async () => {
+      if (!user) { setCheckingVerification(false); return; }
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists() && userDoc.data().isStudentVerified) {
+          setIsVerified(true);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setCheckingVerification(false);
+      }
+    };
+    checkVerification();
+  }, [user]);
+
+  // Fetch notes
   useEffect(() => {
     const fetchNotes = async () => {
       try {
@@ -54,8 +79,22 @@ export default function Notes() {
     return matchSubject && matchSearch;
   });
 
+  if (checkingVerification) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+        <div className="spinner" style={{ width: 32, height: 32, borderWidth: 2 }} />
+      </div>
+    );
+  }
+
   return (
     <div className="notes-page">
+      {/* Show verification modal if not verified */}
+      {!isVerified && (
+        <StudentVerifyModal onVerified={() => setIsVerified(true)} />
+      )}
+
+      {/* Hero */}
       <div className="notes-hero">
         <div className="notes-hero-inner">
           <span className="notes-hero-tag">Free Study Resources</span>
@@ -78,6 +117,15 @@ export default function Notes() {
       </div>
 
       <div className="notes-body">
+        {/* Verified badge */}
+        {isVerified && (
+          <div className="notes-verified-bar">
+            <span>✓ Verified student</span>
+            <span>You have full access to all notes</span>
+          </div>
+        )}
+
+        {/* Subject filters */}
         <div className="notes-filters">
           {SUBJECTS.map(s => (
             <button
