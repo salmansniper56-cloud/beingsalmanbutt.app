@@ -226,3 +226,22 @@
   .notes-hero-title { font-size: 26px; }
   .notes-grid { grid-template-columns: 1fr; }
 }
+
+.notes-verified-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #EAF3DE;
+  border: 0.5px solid #97C459;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.notes-verified-bar span:first-child {
+  color: #27500A;
+  font-weight: 600;
+}
+.notes-verified-bar span:last-child {
+  color: #3B6D11;
+}
