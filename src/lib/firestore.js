@@ -217,6 +217,33 @@ export async function getAdsByUser(uid) {
   return ads;
 }
 
+export async function getPostsByUser(uid, limitCount = 50) {
+  const q = query(
+    collection(db, 'posts'),
+    where('createdBy', '==', uid),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  const posts = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+    };
+  });
+  return posts;
+}
+
+export async function getFollowingCount(uid) {
+  const q = query(
+    collection(db, 'users', uid, 'followers')
+  );
+  const snap = await getDocs(q);
+  return snap.size;
+}
+
 // ---------- Posts ----------
 export async function createPost(data) {
   const ref = collection(db, 'posts');
@@ -312,6 +339,136 @@ export async function addComment(postId, { userId, userName, userPhotoURL, text 
     createdAt: serverTimestamp(),
   });
   await updateDoc(postRef, { commentCount: currentCount + 1, updatedAt: serverTimestamp() });
+}
+
+// ---------- Stories ----------
+export async function createStory(userId, mediaUrl, caption = null) {
+  const storiesRef = collection(db, 'stories');
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+  const docRef = await addDoc(storiesRef, {
+    createdBy: userId,
+    mediaUrl,
+    caption,
+    likeCount: 0,
+    createdAt: serverTimestamp(),
+    expiresAt: Timestamp.fromDate(expiresAt),
+    status: 'active',
+  });
+  return docRef.id;
+}
+
+export async function getActiveStories(limitCount = 50) {
+  const now = Timestamp.now();
+  const q = query(
+    collection(db, 'stories'),
+    where('expiresAt', '>', now),
+    where('status', '==', 'active'),
+    orderBy('expiresAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  const stories = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+      expiresAt: data.expiresAt?.toDate?.()?.toISOString?.() ?? data.expiresAt,
+    };
+  });
+  return stories;
+}
+
+export async function getUserStories(userId, limitCount = 10) {
+  const now = Timestamp.now();
+  const q = query(
+    collection(db, 'stories'),
+    where('createdBy', '==', userId),
+    where('expiresAt', '>', now),
+    where('status', '==', 'active'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  const stories = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+      expiresAt: data.expiresAt?.toDate?.()?.toISOString?.() ?? data.expiresAt,
+    };
+  });
+  return stories;
+}
+
+export async function getFollowingStories(currentUserId, limitCount = 50) {
+  // Get list of users that current user follows
+  const followersRef = collection(db, 'users', currentUserId, 'followers');
+  const followingSnap = await getDocs(followersRef);
+  const followedUserIds = followingSnap.docs.map(d => d.id);
+
+  // Add current user to the list
+  followedUserIds.push(currentUserId);
+
+  // Get all stories from followed users + own
+  const now = Timestamp.now();
+  const q = query(
+    collection(db, 'stories'),
+    where('createdBy', 'in', followedUserIds.length > 0 ? followedUserIds : [currentUserId]),
+    where('expiresAt', '>', now),
+    where('status', '==', 'active'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  const stories = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+      expiresAt: data.expiresAt?.toDate?.()?.toISOString?.() ?? data.expiresAt,
+    };
+  });
+  return stories;
+}
+
+export async function toggleStoryLike(storyId, userId) {
+  const likeRef = doc(db, 'stories', storyId, 'likes', userId);
+  const storyRef = doc(db, 'stories', storyId);
+  const [likeSnap, storySnap] = await Promise.all([getDoc(likeRef), getDoc(storyRef)]);
+  const currentCount = storySnap.data()?.likeCount ?? 0;
+  const batch = writeBatch(db);
+  if (likeSnap.exists()) {
+    batch.delete(likeRef);
+    batch.update(storyRef, { likeCount: Math.max(0, currentCount - 1) });
+  } else {
+    batch.set(likeRef, { createdAt: serverTimestamp() });
+    batch.update(storyRef, { likeCount: currentCount + 1 });
+  }
+  await batch.commit();
+}
+
+export async function isStoryLiked(storyId, userId) {
+  const ref = doc(db, 'stories', storyId, 'likes', userId);
+  const snap = await getDoc(ref);
+  return snap.exists();
+}
+
+export async function deleteExpiredStories() {
+  const now = Timestamp.now();
+  const q = query(
+    collection(db, 'stories'),
+    where('expiresAt', '<=', now)
+  );
+  const snap = await getDocs(q);
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => {
+    batch.delete(d.ref);
+  });
+  await batch.commit();
 }
 
 // ---------- Search ----------

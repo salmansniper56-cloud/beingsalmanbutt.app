@@ -1,0 +1,216 @@
+/* Stories List */
+
+.stories-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #dbdbdb);
+  border-radius: 8px;
+  padding: 12px 0;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.stories-list-wrapper {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 8px 12px;
+  flex: 1;
+  scrollbar-width: none;
+}
+
+.stories-list-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.stories-scroll-btn {
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #dbdbdb);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--text-primary, #262626);
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+.stories-scroll-btn:hover {
+  background: var(--bg-hover, #f5f5f5);
+  border-color: var(--text-primary, #262626);
+}
+
+.story-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.story-avatar-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #dbdbdb;
+  transition: border-color 0.2s;
+}
+
+.story-avatar:hover .story-avatar-img {
+  border-color: #e0e0e0;
+}
+
+.story-avatar-fallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+  border: 2px solid #dbdbdb;
+}
+
+.story-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%);
+  border: 2px solid white;
+  display: none;
+}
+
+.story-avatar:hover .story-indicator {
+  display: block;
+}
+
+.create-story-btn {
+  position: relative;
+}
+
+.create-story-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  border: 2px dashed var(--border-color, #dbdbdb);
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--text-primary, #262626);
+  transition: all 0.2s;
+}
+
+.create-story-btn:hover .create-story-icon {
+  background: linear-gradient(135deg, #e8e8e8 0%, #d8d8d8 100%);
+  border-color: var(--text-primary, #262626);
+}
+
+.story-user-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary, #262626);
+  text-align: center;
+  max-width: 70px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stories-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #dbdbdb);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.stories-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-color, #dbdbdb);
+  border-top-color: var(--text-primary, #262626);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Dark Mode */
+[data-theme="dark"] .stories-container {
+  background: var(--bg-primary, #000);
+  border-color: var(--border-color, #262626);
+}
+
+[data-theme="dark"] .stories-scroll-btn {
+  background: var(--bg-primary, #000);
+  border-color: var(--border-color, #262626);
+  color: var(--text-primary, #f5f5f5);
+}
+
+[data-theme="dark"] .stories-scroll-btn:hover {
+  background: var(--bg-hover, #262626);
+}
+
+[data-theme="dark"] .story-avatar-img,
+[data-theme="dark"] .story-avatar-fallback {
+  border-color: var(--border-color, #363636);
+}
+
+[data-theme="dark"] .story-user-label {
+  color: var(--text-primary, #f5f5f5);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .stories-container {
+    padding: 8px 0;
+  }
+
+  .stories-scroll-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    margin: 0 4px;
+  }
+
+  .story-avatar-img,
+  .story-avatar-fallback,
+  .create-story-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  .story-user-label {
+    font-size: 11px;
+    max-width: 60px;
+  }
+}

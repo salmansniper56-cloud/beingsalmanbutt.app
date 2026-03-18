@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AdCard from '../components/AdCard';
 import PostCard from '../components/PostCard';
 import CreatePostModal from '../components/CreatePostModal';
+import StoriesList from '../components/StoriesList';
 import './Feed.css';
 
 function rankAds(ads) {
@@ -31,8 +32,6 @@ export default function Feed() {
   const [postLiked, setPostLiked] = useState({});
   const [category, setCategory] = useState('');
   const [createPostOpen, setCreatePostOpen] = useState(false);
-
-  const myInitial = (user?.displayName || user?.email || 'U')[0].toUpperCase();
 
   const loadAds = useCallback(async () => {
     try {
@@ -88,27 +87,7 @@ export default function Feed() {
 
   return (
     <div className="feed">
-      {feedMode === 'posts' && (
-        <div className="feed-create-post">
-          <div className="feed-create-top">
-            <div className="feed-create-avatar">{myInitial}</div>
-            <button type="button" className="feed-create-input" onClick={() => setCreatePostOpen(true)}>
-              What's on your mind?
-            </button>
-          </div>
-          <div className="feed-create-actions">
-            <button type="button" className="feed-create-action" onClick={() => setCreatePostOpen(true)}>
-              📷 Photo
-            </button>
-            <button type="button" className="feed-create-action" onClick={() => setCreatePostOpen(true)}>
-              🎥 Video
-            </button>
-            <Link to="/ad/create" className="feed-create-action" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flex: 1, padding: 8, borderRadius: 8, fontWeight: 600, fontSize: 14, color: 'var(--text-2)' }}>
-              🏷️ Sell
-            </Link>
-          </div>
-        </div>
-      )}
+      <StoriesList />
 
       <div className="feed-tabs-bar">
         <button type="button" className={`feed-tab ${feedMode === 'posts' ? 'active' : ''}`} onClick={() => setFeedMode('posts')}>

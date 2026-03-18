@@ -19,6 +19,7 @@ export default function Marketplace() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [category, setCategory] = useState('');
+  const [showMyAds, setShowMyAds] = useState(false);
   const [liked, setLiked] = useState({});
   const [hasMore, setHasMore] = useState(true);
   const lastDocRef = useRef(null);
@@ -53,19 +54,25 @@ export default function Marketplace() {
         category: category || null,
       });
 
+      // Filter by user if showing only my ads
+      let filteredAds = newAds;
+      if (showMyAds && user?.uid) {
+        filteredAds = newAds.filter(ad => ad.createdBy === user.uid);
+      }
+
       if (reset) {
-        setAds(newAds);
+        setAds(filteredAds);
       } else {
-        setAds((prev) => [...prev, ...newAds]);
+        setAds((prev) => [...prev, ...filteredAds]);
       }
 
       lastDocRef.current = lastDoc;
-      setHasMore(newAds.length === 20);
+      setHasMore(filteredAds.length === 20);
 
       // Load like status for logged in user
       if (user?.uid) {
         const likeChecks = await Promise.all(
-          newAds.map((ad) => isLiked(ad.id, user.uid).then((liked) => [ad.id, liked]))
+          filteredAds.map((ad) => isLiked(ad.id, user.uid).then((liked) => [ad.id, liked]))
         );
         const likeMap = Object.fromEntries(likeChecks);
         setLiked((prev) => (reset ? likeMap : { ...prev, ...likeMap }));
@@ -76,7 +83,7 @@ export default function Marketplace() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [category, user?.uid]);
+  }, [category, showMyAds, user?.uid]);
 
   useEffect(() => {
     loadAds(true);
@@ -163,6 +170,24 @@ export default function Marketplace() {
 
       {/* Filters */}
       <section className="marketplace-filters">
+        {/* My Ads Tab */}
+        {user && (
+          <div className="marketplace-tabs">
+            <button
+              className={`marketplace-tab ${!showMyAds ? 'active' : ''}`}
+              onClick={() => { setShowMyAds(false); setCategory(''); }}
+            >
+              All Ads
+            </button>
+            <button
+              className={`marketplace-tab ${showMyAds ? 'active' : ''}`}
+              onClick={() => { setShowMyAds(true); setCategory(''); }}
+            >
+              My Ads ({ads.filter(a => a.createdBy === user.uid).length})
+            </button>
+          </div>
+        )}
+
         <div className="filter-categories">
           {CATEGORIES.map((cat) => (
             <button
