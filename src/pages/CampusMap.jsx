@@ -113,7 +113,7 @@ export default function CampusMap() {
       antialias: true,
     });
 
-    map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
+    map.addControl(new mapboxgl.NavigationControl(), 'top-left');
 
     map.on('load', () => {
       setMapLoaded(true);
@@ -267,7 +267,7 @@ export default function CampusMap() {
       console.error('Place search error:', err);
     }
 
-    setSearchResults([...uniResults.slice(0, 3), ...sellerResults.slice(0, 2), ...placeResults]);
+    setSearchResults([...placeResults, ...uniResults.slice(0, 2), ...sellerResults.slice(0, 2)]);
     setSearching(false);
   }, [sellers]);
 
@@ -399,7 +399,7 @@ export default function CampusMap() {
           <span className="cmap-search-icon">🔍</span>
           <input
             className="cmap-search-input"
-            placeholder="Search universities, places..."
+            placeholder="Search any place, city, restaurant..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
@@ -429,16 +429,42 @@ export default function CampusMap() {
               ))
             ) : (
               <div className="cmap-search-suggestions">
-                <p className="cmap-suggestion-label">Quick access</p>
-                {UNIVERSITIES.slice(0, 5).map((u, i) => (
-                  <div key={i} className="cmap-search-result" onClick={() => selectResult({ ...u, kind: 'university', icon: '🎓' })}>
-                    <span className="cmap-result-icon">🎓</span>
-                    <div className="cmap-result-text">
-                      <span className="cmap-result-name">{u.name}</span>
-                      <span className="cmap-result-sub">{u.city}</span>
-                    </div>
+                <p className="cmap-suggestion-label">Search for anything</p>
+                <div className="cmap-search-result" onClick={() => handleSearch('Islamabad')}>
+                  <span className="cmap-result-icon">🏙️</span>
+                  <div className="cmap-result-text">
+                    <span className="cmap-result-name">Islamabad</span>
+                    <span className="cmap-result-sub">Capital city</span>
                   </div>
-                ))}
+                </div>
+                <div className="cmap-search-result" onClick={() => handleSearch('Lahore')}>
+                  <span className="cmap-result-icon">🏙️</span>
+                  <div className="cmap-result-text">
+                    <span className="cmap-result-name">Lahore</span>
+                    <span className="cmap-result-sub">Punjab</span>
+                  </div>
+                </div>
+                <div className="cmap-search-result" onClick={() => handleSearch('Karachi')}>
+                  <span className="cmap-result-icon">🏙️</span>
+                  <div className="cmap-result-text">
+                    <span className="cmap-result-name">Karachi</span>
+                    <span className="cmap-result-sub">Sindh</span>
+                  </div>
+                </div>
+                <div className="cmap-search-result" onClick={() => handleSearch('restaurants')}>
+                  <span className="cmap-result-icon">🍽️</span>
+                  <div className="cmap-result-text">
+                    <span className="cmap-result-name">Restaurants nearby</span>
+                    <span className="cmap-result-sub">Food & dining</span>
+                  </div>
+                </div>
+                <div className="cmap-search-result" onClick={() => handleSearch('hospitals')}>
+                  <span className="cmap-result-icon">🏥</span>
+                  <div className="cmap-result-text">
+                    <span className="cmap-result-name">Hospitals</span>
+                    <span className="cmap-result-sub">Healthcare</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>

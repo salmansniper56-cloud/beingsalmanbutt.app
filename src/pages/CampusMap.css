@@ -488,9 +488,9 @@
 }
 
 /* Mapbox controls override */
-.mapboxgl-ctrl-bottom-right {
-  bottom: 180px !important;
-  right: 16px !important;
+.mapboxgl-ctrl-top-left {
+  top: 70px !important;
+  left: 16px !important;
 }
 
 .mapboxgl-ctrl-group {
