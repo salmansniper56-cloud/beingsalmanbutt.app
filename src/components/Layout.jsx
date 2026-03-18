@@ -15,6 +15,7 @@ export default function Layout({ children }) {
   const [results, setResults] = useState({ ads: [], users: [] });
   const [searching, setSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
 
@@ -34,6 +35,7 @@ export default function Layout({ children }) {
           followers: userData?.followerCount ?? 0,
           likes: totalLikes,
         });
+        setUserProfile(userData);
       } catch (err) {
         console.error(err);
       }
@@ -214,20 +216,34 @@ export default function Layout({ children }) {
         <main className="layout-main">{children}</main>
 
         <aside className="layout-right">
-          <div className="right-title">Your stats</div>
-          <div className="stat-grid">
-            <div className="stat-card"><div className="stat-num">{stats.ads}</div><div className="stat-label">Active ads</div></div>
-            <div className="stat-card"><div className="stat-num">{stats.likes}</div><div className="stat-label">Likes</div></div>
-            <div className="stat-card"><div className="stat-num">{stats.messages}</div><div className="stat-label">Messages</div></div>
-            <div className="stat-card"><div className="stat-num">{stats.followers}</div><div className="stat-label">Followers</div></div>
-          </div>
-          <hr className="right-divider" />
-          <div className="right-title">Trending</div>
-          <div className="trending-tags">
-            <span className="trending-tag" style={{ background: 'rgba(124,111,247,0.15)', color: '#a99ff9' }}>Books</span>
-            <span className="trending-tag" style={{ background: 'rgba(45,212,191,0.15)', color: '#2dd4bf' }}>Electronics</span>
-            <span className="trending-tag" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>Clothing</span>
-            <span className="trending-tag" style={{ background: 'rgba(248,113,113,0.15)', color: '#f87171' }}>Other</span>
+          {/* Current User Profile */}
+          {userProfile && (
+            <div className="right-user-profile">
+              <Link to={`/profile/${user?.uid}`} className="right-user-link">
+                <img
+                  src={userProfile.photoURL || `https://ui-avatars.com/api?name=${encodeURIComponent(userProfile.displayName || 'User')}`}
+                  alt={userProfile.displayName}
+                  className="right-user-avatar"
+                />
+                <div className="right-user-info">
+                  <div className="right-user-username">{userProfile.email?.split('@')[0] || 'user'}</div>
+                  <div className="right-user-name">{userProfile.displayName || 'User'}</div>
+                </div>
+              </Link>
+              <Link to="/settings" className="right-switch-btn">Switch</Link>
+            </div>
+          )}
+
+          {/* Footer Links */}
+          <div className="right-footer">
+            <div className="right-footer-links">
+              <a href="#">About</a> · <a href="#">Help</a> · <a href="#">Press</a> · <a href="#">API</a> ·
+              <a href="#">Jobs</a> · <a href="#">Privacy</a> · <a href="#">Terms</a> ·
+              <a href="#">Locations</a> · <a href="#">Language</a>
+            </div>
+            <div className="right-footer-copyright">
+              © 2026 CAMPUSKART FROM SALMAN
+            </div>
           </div>
         </aside>
       </div>
