@@ -78,7 +78,11 @@ export default function Profile() {
   }
 
   if (loading) return <div className="app-loading">Loading…</div>;
-  if (!profile) return <div className="profile-missing">Profile not found.</div>;
+  if (!profile) {
+    console.error('Profile not found for uid:', uid);
+    console.error('Current user uid:', currentUser?.uid);
+    return <div className="profile-missing">Profile not found. (UID: {uid})</div>;
+  }
 
   const isOwn = currentUser?.uid === uid;
   const displayName = profile.displayName || 'User';
