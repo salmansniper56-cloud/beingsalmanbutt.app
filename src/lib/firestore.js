@@ -218,11 +218,10 @@ export async function getAdsByUser(uid) {
 }
 
 export async function getPostsByUser(uid, limitCount = 50) {
+  // Simple query by createdBy only - no composite index needed
   const q = query(
     collection(db, 'posts'),
-    where('createdBy', '==', uid),
-    orderBy('createdAt', 'desc'),
-    limit(limitCount)
+    where('createdBy', '==', uid)
   );
   const snap = await getDocs(q);
   const posts = snap.docs.map((d) => {
@@ -233,7 +232,13 @@ export async function getPostsByUser(uid, limitCount = 50) {
       createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
     };
   });
-  return posts;
+  // Sort in JavaScript instead of Firestore
+  posts.sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+  return posts.slice(0, limitCount);
 }
 
 export async function getFollowingCount(uid) {
@@ -382,13 +387,10 @@ export async function getActiveStories(limitCount = 50) {
 
 export async function getUserStories(userId, limitCount = 10) {
   const now = Timestamp.now();
+  // Simple query by createdBy only - no composite index needed
   const q = query(
     collection(db, 'stories'),
-    where('createdBy', '==', userId),
-    where('expiresAt', '>', now),
-    where('status', '==', 'active'),
-    orderBy('createdAt', 'desc'),
-    limit(limitCount)
+    where('createdBy', '==', userId)
   );
   const snap = await getDocs(q);
   const stories = snap.docs.map((d) => {
@@ -400,7 +402,15 @@ export async function getUserStories(userId, limitCount = 10) {
       expiresAt: data.expiresAt?.toDate?.()?.toISOString?.() ?? data.expiresAt,
     };
   });
-  return stories;
+  // Filter and sort in JavaScript instead of Firestore
+  return stories
+    .filter(s => s.status === 'active' && s.expiresAt && new Date(s.expiresAt) > now.toDate())
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    })
+    .slice(0, limitCount);
 }
 
 export async function getFollowingStories(currentUserId, limitCount = 50) {
