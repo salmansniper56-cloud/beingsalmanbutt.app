@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getUser, getAdsByUser, getPostsByUser, getUserStories, toggleFollow, isFollowing } from '../lib/firestore';
 import AdCard from '../components/AdCard';
 import PostCard from '../components/PostCard';
+import PostDetailModal from '../components/PostDetailModal';
 import Layout from '../components/Layout';
 import './Profile.css';
 
@@ -18,6 +19,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('posts');
   const [postLiked, setPostLiked] = useState({});
+  const [selectedPost, setSelectedPost] = useState(null);
 
   useEffect(() => {
     if (!uid) return;
@@ -75,6 +77,7 @@ export default function Profile() {
 
   function handlePostDelete(postId) {
     setPosts(prev => prev.filter(p => p.id !== postId));
+    setSelectedPost(null);
   }
 
   if (loading) return <div className="app-loading">Loading…</div>;
@@ -214,7 +217,7 @@ export default function Profile() {
             </div>
           ) : (
             posts.map((post) => (
-              <Link key={post.id} to={`/post/${post.id}`} className="grid-item">
+              <div key={post.id} className="grid-item" onClick={() => setSelectedPost(post)}>
                 {post.mediaUrls && post.mediaUrls.length > 0 ? (
                   <img src={post.mediaUrls[0]} alt="Post" />
                 ) : (
@@ -228,7 +231,7 @@ export default function Profile() {
                     <span>💬 {post.commentCount || 0}</span>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))
           )
         ) : ads.length === 0 ? (
@@ -260,5 +263,19 @@ export default function Profile() {
     </div>
   );
 
-  return currentUser ? <Layout>{content}</Layout> : <div className="layout"><header className="layout-header"><Link to="/" className="layout-logo">CampusKart</Link><Link to="/login">Log in</Link></header><main className="layout-main">{content}</main></div>;
+  return (
+    <>
+      {currentUser ? <Layout>{content}</Layout> : <div className="layout"><header className="layout-header"><Link to="/" className="layout-logo">CampusKart</Link><Link to="/login">Log in</Link></header><main className="layout-main">{content}</main></div>}
+
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          isLiked={!!postLiked[selectedPost.id]}
+          onClose={() => setSelectedPost(null)}
+          onLike={() => handlePostLike(selectedPost.id)}
+          onDelete={handlePostDelete}
+        />
+      )}
+    </>
+  );
 }

@@ -292,6 +292,59 @@ export async function deletePost(postId) {
   await deleteDoc(ref);
 }
 
+// ---------- Post Comments ----------
+export async function getPostComments(postId) {
+  const q = query(
+    collection(db, 'posts', postId, 'comments'),
+    orderBy('createdAt', 'asc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+    };
+  });
+}
+
+export async function addPostComment(postId, commentData) {
+  const commentRef = collection(db, 'posts', postId, 'comments');
+  const postRef = doc(db, 'posts', postId);
+
+  const batch = writeBatch(db);
+  const newCommentRef = doc(commentRef);
+
+  batch.set(newCommentRef, {
+    ...commentData,
+    createdAt: serverTimestamp(),
+  });
+
+  // Increment comment count
+  const postSnap = await getDoc(postRef);
+  const currentCount = postSnap.data()?.commentCount ?? 0;
+  batch.update(postRef, { commentCount: currentCount + 1 });
+
+  await batch.commit();
+  return newCommentRef.id;
+}
+
+export async function deleteComment(postId, commentId) {
+  const commentRef = doc(db, 'posts', postId, 'comments', commentId);
+  const postRef = doc(db, 'posts', postId);
+
+  const batch = writeBatch(db);
+  batch.delete(commentRef);
+
+  // Decrement comment count
+  const postSnap = await getDoc(postRef);
+  const currentCount = postSnap.data()?.commentCount ?? 0;
+  batch.update(postRef, { commentCount: Math.max(0, currentCount - 1) });
+
+  await batch.commit();
+}
+
 export async function togglePostLike(postId, uid) {
   const likeRef = doc(db, 'posts', postId, 'likes', uid);
   const postRef = doc(db, 'posts', postId);
