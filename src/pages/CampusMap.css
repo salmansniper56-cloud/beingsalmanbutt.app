@@ -1,21 +1,17 @@
-/* CampusMap - Apple Maps-inspired styling */
+/* CampusMap - Google Maps Style */
 
-/* ========== BASE LAYOUT ========== */
 .cmap-page {
   position: fixed;
   inset: 0;
-  background: #f5f5f7;
-  overflow: hidden;
+  background: #202124;
 }
 
 .cmap-map {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
 }
 
-/* ========== LOADING STATE ========== */
+/* Loading */
 .cmap-loading {
   position: absolute;
   inset: 0;
@@ -23,22 +19,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  z-index: 1000;
+  background: #202124;
   gap: 16px;
+  z-index: 1000;
 }
 
 .cmap-loading p {
-  color: white;
+  color: #e8eaed;
   font-size: 16px;
-  font-weight: 500;
 }
 
 .cmap-loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 3px solid #3c4043;
+  border-top-color: #8ab4f8;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -47,240 +42,194 @@
   to { transform: rotate(360deg); }
 }
 
-/* ========== SEARCH BAR ========== */
-.cmap-search-container {
+/* ========== SEARCH BOX (Google Maps Style) ========== */
+.cmap-search-box {
   position: absolute;
   top: 16px;
   left: 16px;
-  right: 16px;
-  max-width: 420px;
+  width: calc(100% - 32px);
+  max-width: 400px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   z-index: 100;
+  overflow: hidden;
 }
 
-.cmap-search {
-  width: 100%;
-  padding: 14px 16px 14px 44px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: none;
-  border-radius: 14px;
-  font-size: 16px;
-  color: #1d1d1f;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+.cmap-search-box.focused {
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
 }
 
-.cmap-search::placeholder {
-  color: #8e8e93;
-}
-
-.cmap-search:focus {
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 122, 255, 0.3);
-  outline: none;
+.cmap-search-input-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
 }
 
 .cmap-search-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
+  font-size: 18px;
+  opacity: 0.6;
+}
+
+.cmap-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
   font-size: 16px;
-  pointer-events: none;
-  z-index: 1;
+  background: transparent;
+  color: #202124;
 }
 
-.cmap-search-spinner {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  border: 2px solid #e0e0e0;
-  border-top-color: #007AFF;
+.cmap-search-input::placeholder {
+  color: #5f6368;
+}
+
+.cmap-search-clear {
+  background: #e8eaed;
+  border: none;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+  cursor: pointer;
+  font-size: 12px;
+  color: #5f6368;
 }
 
-/* Search Results Dropdown */
-.cmap-search-results {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 14px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  animation: slideDown 0.2s ease;
+.cmap-search-clear:hover {
+  background: #dadce0;
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Search dropdown */
+.cmap-search-dropdown {
+  border-top: 1px solid #e8eaed;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
-.cmap-search-item {
+.cmap-suggestion-label {
+  padding: 12px 16px 8px;
+  font-size: 12px;
+  color: #5f6368;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.cmap-search-result {
   display: flex;
   align-items: center;
+  padding: 12px 16px;
   gap: 12px;
-  padding: 14px 16px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s;
 }
 
-.cmap-search-item:hover {
-  background: rgba(0, 122, 255, 0.08);
+.cmap-search-result:hover {
+  background: #f1f3f4;
 }
 
-.cmap-search-item:not(:last-child) {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+.cmap-result-icon {
+  font-size: 20px;
+  width: 32px;
+  text-align: center;
 }
 
-.cmap-search-item-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.cmap-search-item-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.cmap-result-text {
+  flex: 1;
   min-width: 0;
 }
 
-.cmap-search-item-name {
-  font-weight: 600;
-  color: #1d1d1f;
-  font-size: 15px;
+.cmap-result-name {
+  display: block;
+  font-size: 14px;
+  color: #202124;
+  font-weight: 500;
 }
 
-.cmap-search-item-full {
-  color: #8e8e93;
-  font-size: 13px;
+.cmap-result-sub {
+  display: block;
+  font-size: 12px;
+  color: #5f6368;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ========== FLOATING ACTION BUTTONS ========== */
-.cmap-fab-container {
-  position: absolute;
-  right: 16px;
-  bottom: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 100;
-}
-
-.cmap-fab {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: none;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.cmap-fab:hover {
-  transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
-}
-
-.cmap-fab:active {
-  transform: scale(0.95);
-}
-
-.cmap-fab:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.cmap-fab-location {
-  background: #007AFF;
-  color: white;
-}
-
-.cmap-fab-location.active {
-  background: #34C759;
-  animation: pulse 2s ease infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 2px 12px rgba(52, 199, 89, 0.3); }
-  50% { box-shadow: 0 2px 20px rgba(52, 199, 89, 0.6); }
-}
-
-/* ========== LEGEND ========== */
-.cmap-legend {
-  position: absolute;
-  left: 16px;
-  bottom: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 12px 14px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  z-index: 50;
-}
-
-.cmap-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.cmap-result-dist {
   font-size: 12px;
-  color: #1d1d1f;
+  color: #1a73e8;
   font-weight: 500;
 }
 
-.cmap-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
+/* Overlay to close search */
+.cmap-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
 }
 
-/* ========== CUSTOM MARKERS ========== */
+/* ========== MAP CONTROLS ========== */
+.cmap-controls {
+  position: absolute;
+  right: 16px;
+  bottom: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+}
+
+.cmap-control-btn {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cmap-control-btn:hover {
+  background: #f1f3f4;
+}
+
+.cmap-control-btn.active {
+  background: #e8f0fe;
+  box-shadow: 0 2px 6px rgba(26,115,232,0.4);
+}
+
+.cmap-location-btn {
+  background: #1a73e8;
+  color: white;
+}
+
+.cmap-location-btn:hover {
+  background: #1557b0;
+}
+
+.cmap-location-btn:disabled {
+  background: #dadce0;
+  color: #5f6368;
+}
+
+/* ========== MARKERS ========== */
 .cmap-marker {
-  position: relative;
   cursor: pointer;
 }
 
 .cmap-marker-pin {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
-  transition: transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  transition: transform 0.2s;
 }
 
 .cmap-marker:hover .cmap-marker-pin {
@@ -289,550 +238,264 @@
 
 .cmap-marker-emoji {
   transform: rotate(45deg);
-  font-size: 18px;
+  font-size: 14px;
 }
 
-.cmap-marker-pulse {
+/* User location marker */
+.cmap-user-marker {
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+
+.cmap-user-dot {
+  position: absolute;
+  inset: 0;
+  background: #4285F4;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(66,133,244,0.5);
+}
+
+.cmap-user-pulse {
   position: absolute;
   top: 50%;
   left: 50%;
   width: 40px;
   height: 40px;
+  background: rgba(66,133,244,0.2);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  opacity: 0.3;
-  animation: markerPulse 2s ease infinite;
+  animation: pulse 2s ease-out infinite;
 }
 
-@keyframes markerPulse {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
-  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 }
 
-/* ========== USER LOCATION MARKER ========== */
-.cmap-user-marker {
-  position: relative;
-  width: 24px;
-  height: 24px;
-}
-
-.cmap-user-accuracy {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 60px;
-  height: 60px;
-  background: rgba(0, 122, 255, 0.15);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.cmap-user-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 18px;
-  height: 18px;
-  background: #007AFF;
-  border: 3px solid white;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
-}
-
-.cmap-user-heading {
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 10px solid #007AFF;
-  transition: transform 0.3s ease;
-}
-
-/* ========== BOTTOM SHEET ========== */
-.cmap-bottom-sheet {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px 20px 0 0;
-  padding: 8px 20px 34px;
-  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.08);
-  transform: translateY(calc(100% - 140px));
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 200;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.cmap-bottom-sheet.open {
-  transform: translateY(0);
-}
-
-.cmap-sheet-handle {
-  width: 36px;
-  height: 5px;
-  background: #e0e0e0;
-  border-radius: 3px;
-  margin: 0 auto 16px;
+/* Destination marker */
+.cmap-dest-marker {
   cursor: pointer;
 }
 
-.cmap-sheet-handle:hover {
-  background: #c0c0c0;
+.cmap-dest-pin {
+  font-size: 32px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  animation: bounce 0.5s ease;
 }
 
-/* ========== TABS ========== */
-.cmap-tabs {
-  display: flex;
-  gap: 6px;
-  padding: 4px;
-  background: rgba(120, 120, 128, 0.12);
-  border-radius: 10px;
-  margin-bottom: 16px;
-}
-
-.cmap-tab {
-  flex: 1;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  color: #8e8e93;
-  font-weight: 600;
-  font-size: 13px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-}
-
-.cmap-tab:hover {
-  color: #636366;
-}
-
-.cmap-tab.active {
-  background: white;
-  color: #1d1d1f;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 /* ========== DIRECTIONS CARD ========== */
 .cmap-directions-card {
-  background: linear-gradient(135deg, #007AFF 0%, #0055d4 100%);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 16px;
+  position: absolute;
+  bottom: 24px;
+  left: 16px;
+  right: 16px;
+  max-width: 400px;
+  background: #1a73e8;
   color: white;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 12px rgba(26,115,232,0.4);
+  z-index: 100;
 }
 
-.cmap-directions-header {
+.cmap-dir-info {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.cmap-directions-icon {
-  font-size: 28px;
+.cmap-dir-icon {
+  font-size: 24px;
 }
 
-.cmap-directions-info {
-  flex: 1;
-}
-
-.cmap-directions-info h3 {
+.cmap-dir-dest {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin: 0 0 4px;
 }
 
-.cmap-directions-info p {
+.cmap-dir-stats {
   font-size: 14px;
   opacity: 0.9;
+  margin: 0;
 }
 
-.cmap-directions-close {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+.cmap-dir-close {
+  background: rgba(255,255,255,0.2);
   border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   color: white;
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
 }
 
-.cmap-directions-close:hover {
-  background: rgba(255, 255, 255, 0.3);
+.cmap-dir-close:hover {
+  background: rgba(255,255,255,0.3);
 }
 
-/* ========== SELECTED CARD ========== */
-.cmap-selected-card {
-  position: relative;
+/* ========== PLACE CARD ========== */
+.cmap-place-card {
+  position: absolute;
+  bottom: 24px;
+  left: 16px;
+  right: 16px;
+  max-width: 400px;
   background: white;
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 100;
 }
 
-.cmap-selected-close {
+.cmap-card-close {
   position: absolute;
   top: 12px;
   right: 12px;
+  background: #f1f3f4;
+  border: none;
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #f5f5f7;
-  border: none;
-  color: #8e8e93;
-  font-size: 14px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.cmap-selected-close:hover {
-  background: #e8e8ed;
-  color: #1d1d1f;
-}
-
-.cmap-selected-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.cmap-selected-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1d1d1f;
-  margin-bottom: 8px;
-  padding-right: 30px;
-}
-
-.cmap-selected-info {
   font-size: 14px;
-  color: #636366;
-  margin-bottom: 6px;
+  color: #5f6368;
 }
 
-.cmap-selected-actions {
+.cmap-card-close:hover {
+  background: #dadce0;
+}
+
+.cmap-card-header {
   display: flex;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-/* ========== BUTTONS ========== */
-.cmap-btn {
-  flex: 1;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  text-align: center;
-  border: none;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-}
-
-.cmap-btn.primary {
-  background: #007AFF;
-  color: white;
-}
-
-.cmap-btn.primary:hover {
-  background: #0066d6;
-}
-
-.cmap-btn.primary:disabled {
-  background: #c7c7cc;
-  cursor: not-allowed;
-}
-
-.cmap-btn.secondary {
-  background: #f5f5f7;
-  color: #007AFF;
-}
-
-.cmap-btn.secondary:hover {
-  background: #e8e8ed;
-}
-
-/* ========== NEARBY LIST ========== */
-.cmap-nearby,
-.cmap-list {
-  margin-top: 8px;
-}
-
-.cmap-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #8e8e93;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
-.cmap-nearby-item,
-.cmap-list-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  background: white;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+.cmap-card-icon {
+  font-size: 32px;
 }
 
-.cmap-nearby-item:hover,
-.cmap-list-item:hover {
-  background: #f5f5f7;
-  transform: translateX(4px);
-}
-
-.cmap-nearby-info,
-.cmap-list-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.cmap-nearby-name,
-.cmap-list-name {
-  font-size: 15px;
+.cmap-card-title {
+  margin: 0;
+  font-size: 18px;
   font-weight: 600;
-  color: #1d1d1f;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #202124;
 }
 
-.cmap-nearby-distance,
-.cmap-list-sub {
-  font-size: 13px;
-  color: #8e8e93;
+.cmap-card-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #5f6368;
 }
 
-.cmap-nearby-dir,
-.cmap-list-dir {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #007AFF;
-  border: none;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
+.cmap-card-programs {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #5f6368;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.cmap-card-distance {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #1a73e8;
+  font-weight: 500;
+}
+
+.cmap-card-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
 }
 
-.cmap-nearby-dir:hover,
-.cmap-list-dir:hover {
-  background: #0066d6;
-  transform: scale(1.1);
+.cmap-action-btn {
+  display: block;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  text-decoration: none;
 }
 
-.cmap-nearby-dir:disabled,
-.cmap-list-dir:disabled {
-  background: #c7c7cc;
+.cmap-action-btn.primary {
+  background: #1a73e8;
+  color: white;
+}
+
+.cmap-action-btn.primary:hover {
+  background: #1557b0;
+}
+
+.cmap-action-btn.primary:disabled {
+  background: #dadce0;
+  color: #5f6368;
   cursor: not-allowed;
-  transform: none;
 }
 
-.cmap-list-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.cmap-action-btn.secondary {
+  background: #f1f3f4;
+  color: #1a73e8;
+}
+
+.cmap-action-btn.secondary:hover {
+  background: #e8eaed;
 }
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 480px) {
-  .cmap-search-container {
+  .cmap-search-box {
     top: 12px;
     left: 12px;
+    width: calc(100% - 24px);
+  }
+
+  .cmap-controls {
     right: 12px;
+    bottom: 100px;
   }
 
-  .cmap-search {
-    padding: 12px 16px 12px 40px;
-    font-size: 15px;
-    border-radius: 12px;
-  }
-
-  .cmap-fab-container {
-    right: 12px;
-    bottom: 180px;
-  }
-
-  .cmap-fab {
+  .cmap-control-btn {
     width: 44px;
     height: 44px;
-    font-size: 20px;
   }
 
-  .cmap-legend {
+  .cmap-directions-card,
+  .cmap-place-card {
+    bottom: 16px;
     left: 12px;
-    bottom: 180px;
-    padding: 10px 12px;
-  }
-
-  .cmap-bottom-sheet {
-    padding: 8px 16px 28px;
-    border-radius: 16px 16px 0 0;
-  }
-
-  .cmap-selected-name {
-    font-size: 18px;
+    right: 12px;
   }
 }
 
-/* ========== DARK MODE ========== */
-@media (prefers-color-scheme: dark) {
-  .cmap-page {
-    background: #1c1c1e;
-  }
+/* Mapbox controls override */
+.mapboxgl-ctrl-bottom-right {
+  bottom: 180px !important;
+  right: 16px !important;
+}
 
-  .cmap-loading {
-    background: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);
-  }
-
-  .cmap-search {
-    background: rgba(44, 44, 46, 0.92);
-    color: #f5f5f7;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
-  }
-
-  .cmap-search::placeholder {
-    color: #636366;
-  }
-
-  .cmap-search:focus {
-    background: rgba(44, 44, 46, 0.98);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 122, 255, 0.4);
-  }
-
-  .cmap-search-results {
-    background: rgba(44, 44, 46, 0.95);
-  }
-
-  .cmap-search-item:hover {
-    background: rgba(0, 122, 255, 0.15);
-  }
-
-  .cmap-search-item:not(:last-child) {
-    border-bottom-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .cmap-search-item-name {
-    color: #f5f5f7;
-  }
-
-  .cmap-fab {
-    background: rgba(44, 44, 46, 0.92);
-  }
-
-  .cmap-legend {
-    background: rgba(44, 44, 46, 0.92);
-  }
-
-  .cmap-legend-item {
-    color: #f5f5f7;
-  }
-
-  .cmap-bottom-sheet {
-    background: rgba(28, 28, 30, 0.95);
-  }
-
-  .cmap-sheet-handle {
-    background: #48484a;
-  }
-
-  .cmap-tabs {
-    background: rgba(72, 72, 74, 0.3);
-  }
-
-  .cmap-tab {
-    color: #8e8e93;
-  }
-
-  .cmap-tab.active {
-    background: #2c2c2e;
-    color: #f5f5f7;
-  }
-
-  .cmap-selected-card {
-    background: #2c2c2e;
-  }
-
-  .cmap-selected-close {
-    background: #48484a;
-    color: #8e8e93;
-  }
-
-  .cmap-selected-close:hover {
-    background: #636366;
-    color: #f5f5f7;
-  }
-
-  .cmap-selected-name {
-    color: #f5f5f7;
-  }
-
-  .cmap-selected-info {
-    color: #8e8e93;
-  }
-
-  .cmap-btn.secondary {
-    background: #48484a;
-    color: #0a84ff;
-  }
-
-  .cmap-btn.secondary:hover {
-    background: #636366;
-  }
-
-  .cmap-nearby-item,
-  .cmap-list-item {
-    background: #2c2c2e;
-  }
-
-  .cmap-nearby-item:hover,
-  .cmap-list-item:hover {
-    background: #3a3a3c;
-  }
-
-  .cmap-nearby-name,
-  .cmap-list-name {
-    color: #f5f5f7;
-  }
-
-  .cmap-section-title {
-    color: #8e8e93;
-  }
+.mapboxgl-ctrl-group {
+  background: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+  border: none !important;
 }
