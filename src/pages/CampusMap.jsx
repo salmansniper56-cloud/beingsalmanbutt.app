@@ -34,12 +34,11 @@ const UNIVERSITIES = [
 ];
 
 const MAP_STYLES = {
-  streets: 'mapbox://styles/mapbox/streets-v12',
+  streets:   'mapbox://styles/mapbox/streets-v12',
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
-  standard: 'mapbox://styles/mapbox/standard',
+  dark:      'mapbox://styles/mapbox/dark-v11',
 };
 
-// Helper to get icon based on POI category
 const getCategoryIcon = (category) => {
   const cat = (category || '').toLowerCase();
   if (cat.includes('restaurant') || cat.includes('food') || cat.includes('cafe') || cat.includes('coffee')) return '🍽️';
@@ -58,76 +57,90 @@ const getCategoryIcon = (category) => {
 };
 
 export default function CampusMap() {
-  const mapContainerRef = useRef(null);
-  const mapRef = useRef(null);
-  const markersRef = useRef([]);
-  const userMarkerRef = useRef(null);
-  const watchIdRef = useRef(null);
+  const mapContainerRef    = useRef(null);
+  const mapRef             = useRef(null);
+  const markersRef         = useRef([]);
+  const userMarkerRef      = useRef(null);
   const destinationMarkerRef = useRef(null);
 
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapStyle, setMapStyle] = useState('streets');
-  const [userLocation, setUserLocation] = useState(null);
-  const [locating, setLocating] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const [sellers, setSellers] = useState([]);
-  const [search, setSearch] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [directions, setDirections] = useState(null);
+  const [mapLoaded, setMapLoaded]               = useState(false);
+  const [mapStyle, setMapStyle]                 = useState('streets');
+  const [userLocation, setUserLocation]         = useState(null);
+  const [locating, setLocating]                 = useState(false);
+  const [selected, setSelected]                 = useState(null);
+  const [sellers, setSellers]                   = useState([]);
+  const [search, setSearch]                     = useState('');
+  const [searchResults, setSearchResults]       = useState([]);
+  const [searching, setSearching]               = useState(false);
+  const [searchFocused, setSearchFocused]       = useState(false);
+  const [directions, setDirections]             = useState(null);
   const [directionsLoading, setDirectionsLoading] = useState(false);
+  const [reverseGeocoding, setReverseGeocoding] = useState(false);
 
-  // Haversine distance
   const getDistance = useCallback((lat1, lng1, lat2, lng2) => {
-    const R = 6371;
+    const R    = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+    const a    = Math.sin(dLat/2)**2 + Math.cos((lat1*Math.PI)/180)*Math.cos((lat2*Math.PI)/180)*Math.sin(dLng/2)**2;
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
   }, []);
 
-  // Create marker element - fixed anchoring
   const createMarkerElement = useCallback((color, emoji) => {
     const el = document.createElement('div');
     el.className = 'cmap-marker';
-    el.innerHTML = `
-      <div class="cmap-marker-pin" style="background: ${color}">
-        <span class="cmap-marker-emoji">${emoji}</span>
-      </div>
-    `;
+    el.innerHTML = `<div class="cmap-marker-pin" style="background:${color}"><span class="cmap-marker-emoji">${emoji}</span></div>`;
     return el;
   }, []);
 
-  // Create user location marker
   const createUserMarkerElement = useCallback(() => {
     const el = document.createElement('div');
     el.className = 'cmap-user-marker';
-    el.innerHTML = `
-      <div class="cmap-user-pulse"></div>
-      <div class="cmap-user-dot"></div>
-    `;
+    el.innerHTML = `<div class="cmap-user-pulse"></div><div class="cmap-user-dot"></div>`;
     return el;
   }, []);
 
-  // Create destination marker
-  const createDestinationMarker = useCallback(() => {
-    const el = document.createElement('div');
-    el.className = 'cmap-dest-marker';
-    el.innerHTML = `<div class="cmap-dest-pin">📍</div>`;
-    return el;
+  // Reverse geocode a lat/lng to get place name
+  const reverseGeocode = useCallback(async (lat, lng) => {
+    try {
+      const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+      const res   = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=poi,address,place&limit=1`
+      );
+      const data  = await res.json();
+      if (data.features?.length > 0) {
+        const f        = data.features[0];
+        const name     = f.text || f.place_name.split(',')[0];
+        const fullName = f.place_name;
+        const category = f.properties?.category || f.place_type?.[0] || '';
+        return { name, fullName, category, icon: getCategoryIcon(category) };
+      }
+      return { name: 'Selected Location', fullName: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, category: '', icon: '📍' };
+    } catch {
+      return { name: 'Selected Location', fullName: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, category: '', icon: '📍' };
+    }
   }, []);
 
-  // Initialize map
+  // Add/update destination marker
+  const setDestinationMarker = useCallback((lat, lng, icon = '📍') => {
+    if (!mapRef.current) return;
+    if (destinationMarkerRef.current) destinationMarkerRef.current.remove();
+    const el      = document.createElement('div');
+    el.className  = 'cmap-dest-marker';
+    el.innerHTML  = `<div class="cmap-dest-pin">${icon}</div>`;
+    destinationMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+      .setLngLat([lng, lat])
+      .addTo(mapRef.current);
+  }, []);
+
+  // Init map
   useEffect(() => {
     if (mapRef.current || !mapContainerRef.current) return;
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: MAP_STYLES[mapStyle],
+      style: MAP_STYLES.streets,
       center: [69.3451, 30.3753],
       zoom: 5,
-      pitch: 0,
       antialias: true,
     });
 
@@ -136,98 +149,72 @@ export default function CampusMap() {
     map.on('load', () => {
       setMapLoaded(true);
       mapRef.current = map;
-      
-      // Make POI labels clickable
-      map.on('click', (e) => {
-        // Query for POI features at click point
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: ['poi-label', 'transit-label', 'airport-label', 'settlement-label', 'settlement-subdivision-label']
-        });
-        
-        if (features.length > 0) {
-          const feature = features[0];
-          const name = feature.properties.name || feature.properties.name_en || 'Unknown Place';
-          const category = feature.properties.category || feature.properties.class || feature.properties.type || '';
-          const coords = feature.geometry.coordinates || [e.lngLat.lng, e.lngLat.lat];
-          const icon = getCategoryIcon(category);
-          
-          const poi = {
-            name: name,
-            fullName: `${name}${category ? ' • ' + category : ''}`,
-            lat: coords[1] || e.lngLat.lat,
-            lng: coords[0] || e.lngLat.lng,
-            kind: 'place',
-            category: category,
-            icon: icon
-          };
-          
-          setSelected(poi);
-          
-          // Add destination marker
-          if (destinationMarkerRef.current) destinationMarkerRef.current.remove();
-          const el = document.createElement('div');
-          el.className = 'cmap-dest-marker';
-          el.innerHTML = `<div class="cmap-dest-pin">${icon}</div>`;
-          destinationMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-            .setLngLat([poi.lng, poi.lat])
-            .addTo(map);
-        }
-      });
-      
-      // Change cursor on POI hover
-      map.on('mouseenter', 'poi-label', () => {
-        map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', 'poi-label', () => {
-        map.getCanvas().style.cursor = '';
-      });
     });
 
+    // ✅ KEY FIX: Click anywhere on map → reverse geocode and show card
+    map.on('click', async (e) => {
+      const { lng, lat } = e.lngLat;
+
+      // Check if click was on a custom marker (don't override)
+      if (e.originalEvent.target.closest('.cmap-marker, .cmap-user-marker')) return;
+
+      setReverseGeocoding(true);
+      setSelected(null);
+
+      const place = await reverseGeocode(lat, lng);
+      const poi   = { ...place, lat, lng, kind: 'place' };
+
+      setSelected(poi);
+      setDestinationMarker(lat, lng, place.icon);
+      setReverseGeocoding(false);
+    });
+
+    map.getCanvas().style.cursor = 'pointer';
+
     return () => {
-      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [reverseGeocode, setDestinationMarker]);
 
   // Change map style
   const changeMapStyle = useCallback((style) => {
     if (!mapRef.current) return;
     setMapStyle(style);
     mapRef.current.setStyle(MAP_STYLES[style]);
-  }, []);
+    // Re-add route after style change
+    mapRef.current.once('styledata', () => {
+      if (directions) {
+        // Route will be cleared on style change — inform user
+        setDirections(null);
+      }
+    });
+  }, [directions]);
 
   // Fetch sellers
   useEffect(() => {
     const fetchSellers = async () => {
       try {
         const snap = await getDocs(collection(db, 'ads'));
-        const ads = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((ad) => ad.lat && ad.lng);
-        setSellers(ads);
-      } catch (err) {
-        console.error('Failed to fetch sellers:', err);
-      }
+        setSellers(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ad => ad.lat && ad.lng));
+      } catch (err) { console.error(err); }
     };
     fetchSellers();
   }, []);
 
-  // Clear markers
   const clearMarkers = useCallback(() => {
-    markersRef.current.forEach((m) => m.remove());
+    markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
   }, []);
 
-  // Plot all markers on map load
+  // Plot markers
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
-
     clearMarkers();
 
-    // Plot universities
-    UNIVERSITIES.forEach((u) => {
-      const color = u.type === 'Private' ? '#AF52DE' : '#34C759';
-      const el = createMarkerElement(color, '🎓');
-
+    UNIVERSITIES.forEach(u => {
+      const color  = u.type === 'Private' ? '#AF52DE' : '#34C759';
+      const el     = createMarkerElement(color, '🎓');
       const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([u.lng, u.lat])
         .addTo(mapRef.current);
@@ -239,14 +226,11 @@ export default function CampusMap() {
       };
       el.addEventListener('click', handleSelect);
       el.addEventListener('touchend', handleSelect);
-
       markersRef.current.push(marker);
     });
 
-    // Plot sellers
-    sellers.forEach((ad) => {
-      const el = createMarkerElement('#FF3B30', '🛍️');
-
+    sellers.forEach(ad => {
+      const el     = createMarkerElement('#FF3B30', '🛍️');
       const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([ad.lng, ad.lat])
         .addTo(mapRef.current);
@@ -258,313 +242,193 @@ export default function CampusMap() {
       };
       el.addEventListener('click', handleSelect);
       el.addEventListener('touchend', handleSelect);
-
       markersRef.current.push(marker);
     });
   }, [mapLoaded, sellers, clearMarkers, createMarkerElement]);
 
   // Get user location
   const getLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      alert('Geolocation not supported');
-      return;
-    }
-
+    if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
     setLocating(true);
-
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      pos => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setUserLocation({ lat, lng });
         setLocating(false);
-
         if (userMarkerRef.current) userMarkerRef.current.remove();
-
         const el = createUserMarkerElement();
         userMarkerRef.current = new mapboxgl.Marker({ element: el })
-          .setLngLat([lng, lat])
-          .addTo(mapRef.current);
-
+          .setLngLat([lng, lat]).addTo(mapRef.current);
         mapRef.current?.flyTo({ center: [lng, lat], zoom: 15, duration: 1500 });
       },
-      () => {
-        setLocating(false);
-        alert('Could not get location. Enable location services.');
-      },
+      () => { setLocating(false); alert('Could not get location. Enable location services.'); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }, [createUserMarkerElement]);
 
-  // Combined search - universities, sellers, and places
+  // Search
   const handleSearch = useCallback(async (query) => {
     setSearch(query);
-
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
+    if (!query.trim()) { setSearchResults([]); return; }
     setSearching(true);
 
-    // Search universities locally
-    const uniResults = UNIVERSITIES.filter(
-      (u) => u.name.toLowerCase().includes(query.toLowerCase()) || u.city.toLowerCase().includes(query.toLowerCase())
-    ).map((u) => ({ ...u, kind: 'university', icon: '🎓' }));
+    const uniResults = UNIVERSITIES
+      .filter(u => u.name.toLowerCase().includes(query.toLowerCase()) || u.city.toLowerCase().includes(query.toLowerCase()))
+      .map(u => ({ ...u, kind: 'university', icon: '🎓' }));
 
-    // Search sellers locally
     const sellerResults = sellers
-      .filter((s) => s.title?.toLowerCase().includes(query.toLowerCase()))
-      .map((s) => ({ ...s, kind: 'seller', icon: '🛍️', name: s.title }));
+      .filter(s => s.title?.toLowerCase().includes(query.toLowerCase()))
+      .map(s => ({ ...s, kind: 'seller', icon: '🛍️', name: s.title }));
 
-    // Search places via Mapbox - increased limit and added proximity for better results
     let placeResults = [];
     try {
-      const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+      const token  = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
       const center = mapRef.current?.getCenter();
-      const proximityParam = center ? `&proximity=${center.lng},${center.lat}` : '';
-      const res = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=pk&limit=10${proximityParam}&types=poi,address,place,locality,neighborhood`
+      const prox   = center ? `&proximity=${center.lng},${center.lat}` : '';
+      const res    = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=pk&limit=8${prox}&types=poi,address,place,locality,neighborhood`
       );
-      const data = await res.json();
-      placeResults = (data.features || []).map((f) => ({
-        name: f.text,
+      const data   = await res.json();
+      placeResults = (data.features || []).map(f => ({
+        name:     f.text,
         fullName: f.place_name,
-        lat: f.center[1],
-        lng: f.center[0],
-        kind: 'place',
+        lat:      f.center[1],
+        lng:      f.center[0],
+        kind:     'place',
         category: f.properties?.category || f.place_type?.[0] || '',
-        icon: getCategoryIcon(f.properties?.category || f.place_type?.[0] || ''),
+        icon:     getCategoryIcon(f.properties?.category || f.place_type?.[0] || ''),
       }));
-    } catch (err) {
-      console.error('Place search error:', err);
-    }
+    } catch (err) { console.error(err); }
 
     setSearchResults([...uniResults, ...sellerResults, ...placeResults]);
     setSearching(false);
   }, [sellers]);
 
-  // Select a search result
   const selectResult = useCallback((item) => {
     setSearch(item.name);
     setSearchResults([]);
     setSearchFocused(false);
     setSelected(item);
-
     mapRef.current?.flyTo({ center: [item.lng, item.lat], zoom: 15, duration: 1500 });
+    if (item.kind === 'place') setDestinationMarker(item.lat, item.lng, item.icon);
+  }, [setDestinationMarker]);
 
-    // Add destination marker for places
-    if (item.kind === 'place') {
-      if (destinationMarkerRef.current) destinationMarkerRef.current.remove();
-      const el = createDestinationMarker();
-      
-      // Add click/touch handlers for the destination marker
-      const handleSelect = (e) => {
-        e.stopPropagation();
-        setSelected(item);
-      };
-      el.addEventListener('click', handleSelect);
-      el.addEventListener('touchend', handleSelect);
-      
-      destinationMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat([item.lng, item.lat])
-        .addTo(mapRef.current);
-    }
-  }, [createDestinationMarker]);
-
-  // Get directions
+  // Get directions via OSRM
   const getDirections = useCallback(async (dest) => {
-    if (!userLocation) {
-      alert('Get your location first!');
-      getLocation();
-      return;
-    }
-
+    if (!userLocation) { getLocation(); return; }
     setDirectionsLoading(true);
-
     try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${userLocation.lng},${userLocation.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const url  = `https://router.project-osrm.org/route/v1/driving/${userLocation.lng},${userLocation.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
+      const data = await (await fetch(url)).json();
 
       if (data.routes?.length) {
-        const route = data.routes[0];
+        const route       = data.routes[0];
         const coordinates = route.geometry.coordinates;
+        const map         = mapRef.current;
 
-        const map = mapRef.current;
-
-        // Remove existing route
-        if (map.getLayer('route')) map.removeLayer('route');
+        if (map.getLayer('route'))    map.removeLayer('route');
         if (map.getLayer('route-bg')) map.removeLayer('route-bg');
-        if (map.getSource('route')) map.removeSource('route');
+        if (map.getSource('route'))   map.removeSource('route');
 
-        // Add route
-        map.addSource('route', {
-          type: 'geojson',
-          data: { type: 'Feature', geometry: { type: 'LineString', coordinates } },
-        });
+        map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates } } });
+        map.addLayer({ id: 'route-bg', type: 'line', source: 'route', paint: { 'line-color': '#4285F4', 'line-width': 8, 'line-opacity': 0.3 } });
+        map.addLayer({ id: 'route',    type: 'line', source: 'route', paint: { 'line-color': '#4285F4', 'line-width': 5 } });
 
-        map.addLayer({
-          id: 'route-bg',
-          type: 'line',
-          source: 'route',
-          paint: { 'line-color': '#4285F4', 'line-width': 8, 'line-opacity': 0.4 },
-        });
-
-        map.addLayer({
-          id: 'route',
-          type: 'line',
-          source: 'route',
-          paint: { 'line-color': '#4285F4', 'line-width': 5 },
-        });
-
-        // Fit to route
-        const bounds = coordinates.reduce(
-          (b, c) => b.extend(c),
-          new mapboxgl.LngLatBounds(coordinates[0], coordinates[0])
-        );
+        const bounds = coordinates.reduce((b, c) => b.extend(c), new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
         map.fitBounds(bounds, { padding: 80, duration: 1500 });
 
-        setDirections({
-          distance: (route.distance / 1000).toFixed(1),
-          duration: Math.round(route.duration / 60),
-          dest: dest.name || dest.title,
-        });
+        setDirections({ distance: (route.distance / 1000).toFixed(1), duration: Math.round(route.duration / 60), dest: dest.name || dest.title });
       }
-    } catch (err) {
-      console.error('Directions error:', err);
-      alert('Could not get directions');
-    } finally {
-      setDirectionsLoading(false);
-    }
+    } catch { alert('Could not get directions. Try again.'); }
+    finally { setDirectionsLoading(false); }
   }, [userLocation, getLocation]);
 
-  // Clear directions
   const clearDirections = useCallback(() => {
     const map = mapRef.current;
     if (map) {
-      if (map.getLayer('route')) map.removeLayer('route');
+      if (map.getLayer('route'))    map.removeLayer('route');
       if (map.getLayer('route-bg')) map.removeLayer('route-bg');
-      if (map.getSource('route')) map.removeSource('route');
+      if (map.getSource('route'))   map.removeSource('route');
     }
-    if (destinationMarkerRef.current) {
-      destinationMarkerRef.current.remove();
-      destinationMarkerRef.current = null;
-    }
+    if (destinationMarkerRef.current) { destinationMarkerRef.current.remove(); destinationMarkerRef.current = null; }
     setDirections(null);
     setSelected(null);
   }, []);
 
-  // Close selected
   const closeSelected = useCallback(() => {
     setSelected(null);
-    if (destinationMarkerRef.current) {
-      destinationMarkerRef.current.remove();
-      destinationMarkerRef.current = null;
-    }
+    if (destinationMarkerRef.current) { destinationMarkerRef.current.remove(); destinationMarkerRef.current = null; }
   }, []);
 
   return (
     <div className="cmap-page">
       <div ref={mapContainerRef} className="cmap-map" />
 
-      {!mapLoaded && (
+      {(!mapLoaded || reverseGeocoding) && (
         <div className="cmap-loading">
           <div className="cmap-loading-spinner" />
-          <p>Loading Map...</p>
+          <p>{reverseGeocoding ? 'Getting place info...' : 'Loading Map...'}</p>
         </div>
       )}
 
-      {/* Google Maps style search */}
+      {/* Search box */}
       <div className={`cmap-search-box ${searchFocused ? 'focused' : ''}`}>
         <div className="cmap-search-input-row">
           <span className="cmap-search-icon">🔍</span>
           <input
             className="cmap-search-input"
-            placeholder="Search any place, city, restaurant..."
+            placeholder="Search any place, restaurant, hospital..."
             value={search}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={e => handleSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
           />
+          {searching && <span style={{ fontSize: 12, color: '#888' }}>⏳</span>}
           {search && (
-            <button className="cmap-search-clear" onClick={() => { setSearch(''); setSearchResults([]); }}>
-              ✕
-            </button>
+            <button className="cmap-search-clear" onClick={() => { setSearch(''); setSearchResults([]); }}>✕</button>
           )}
         </div>
 
-        {/* Search results dropdown */}
-        {searchFocused && (searchResults.length > 0 || !search) && (
+        {searchFocused && searchResults.length > 0 && (
           <div className="cmap-search-dropdown">
-            {searchResults.length > 0 ? (
-              searchResults.map((r, i) => (
-                <div key={i} className="cmap-search-result" onClick={() => selectResult(r)}>
-                  <span className="cmap-result-icon">{r.icon}</span>
-                  <div className="cmap-result-text">
-                    <span className="cmap-result-name">{r.name}</span>
-                    <span className="cmap-result-sub">{r.fullName || r.city || r.category}</span>
-                  </div>
-                  {userLocation && (
-                    <span className="cmap-result-dist">{getDistance(userLocation.lat, userLocation.lng, r.lat, r.lng)} km</span>
-                  )}
+            {searchResults.map((r, i) => (
+              <div key={i} className="cmap-search-result" onClick={() => selectResult(r)}>
+                <span className="cmap-result-icon">{r.icon}</span>
+                <div className="cmap-result-text">
+                  <span className="cmap-result-name">{r.name}</span>
+                  <span className="cmap-result-sub">{r.fullName || r.city || r.category}</span>
                 </div>
-              ))
-            ) : (
-              <div className="cmap-search-suggestions">
-                <p className="cmap-suggestion-label">Search for anything</p>
-                <div className="cmap-search-result" onClick={() => handleSearch('Islamabad')}>
-                  <span className="cmap-result-icon">🏙️</span>
-                  <div className="cmap-result-text">
-                    <span className="cmap-result-name">Islamabad</span>
-                    <span className="cmap-result-sub">Capital city</span>
-                  </div>
-                </div>
-                <div className="cmap-search-result" onClick={() => handleSearch('Lahore')}>
-                  <span className="cmap-result-icon">🏙️</span>
-                  <div className="cmap-result-text">
-                    <span className="cmap-result-name">Lahore</span>
-                    <span className="cmap-result-sub">Punjab</span>
-                  </div>
-                </div>
-                <div className="cmap-search-result" onClick={() => handleSearch('Karachi')}>
-                  <span className="cmap-result-icon">🏙️</span>
-                  <div className="cmap-result-text">
-                    <span className="cmap-result-name">Karachi</span>
-                    <span className="cmap-result-sub">Sindh</span>
-                  </div>
-                </div>
-                <div className="cmap-search-result" onClick={() => handleSearch('restaurants')}>
-                  <span className="cmap-result-icon">🍽️</span>
-                  <div className="cmap-result-text">
-                    <span className="cmap-result-name">Restaurants nearby</span>
-                    <span className="cmap-result-sub">Food & dining</span>
-                  </div>
-                </div>
-                <div className="cmap-search-result" onClick={() => handleSearch('hospitals')}>
-                  <span className="cmap-result-icon">🏥</span>
-                  <div className="cmap-result-text">
-                    <span className="cmap-result-name">Hospitals</span>
-                    <span className="cmap-result-sub">Healthcare</span>
-                  </div>
+                {userLocation && (
+                  <span className="cmap-result-dist">{getDistance(userLocation.lat, userLocation.lng, r.lat, r.lng)} km</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {searchFocused && !search && (
+          <div className="cmap-search-dropdown">
+            <p className="cmap-suggestion-label">Tap anywhere on map to get place info</p>
+            {['Islamabad', 'Lahore', 'Karachi', 'Rawalpindi', 'restaurants', 'hospitals', 'mosques'].map(s => (
+              <div key={s} className="cmap-search-result" onClick={() => handleSearch(s)}>
+                <span className="cmap-result-icon">{getCategoryIcon(s)}</span>
+                <div className="cmap-result-text">
+                  <span className="cmap-result-name">{s}</span>
                 </div>
               </div>
-            )}
+            ))}
           </div>
         )}
       </div>
 
-      {/* Click outside to close search */}
       {searchFocused && <div className="cmap-overlay" onClick={() => setSearchFocused(false)} />}
 
       {/* Map controls */}
       <div className="cmap-controls">
-        <button className={`cmap-control-btn ${mapStyle === 'streets' ? 'active' : ''}`} onClick={() => changeMapStyle('streets')}>
-          🗺️
-        </button>
-        <button className={`cmap-control-btn ${mapStyle === 'satellite' ? 'active' : ''}`} onClick={() => changeMapStyle('satellite')}>
-          🛰️
-        </button>
-        <button className="cmap-control-btn cmap-location-btn" onClick={getLocation} disabled={locating}>
-          {locating ? '...' : '📍'}
+        <button className={`cmap-control-btn ${mapStyle === 'streets' ? 'active' : ''}`} onClick={() => changeMapStyle('streets')} title="Streets">🗺️</button>
+        <button className={`cmap-control-btn ${mapStyle === 'satellite' ? 'active' : ''}`} onClick={() => changeMapStyle('satellite')} title="Satellite">🛰️</button>
+        <button className={`cmap-control-btn ${mapStyle === 'dark' ? 'active' : ''}`} onClick={() => changeMapStyle('dark')} title="Dark">🌙</button>
+        <button className="cmap-control-btn cmap-location-btn" onClick={getLocation} disabled={locating} title="My location">
+          {locating ? '⏳' : '📍'}
         </button>
       </div>
 
@@ -586,21 +450,21 @@ export default function CampusMap() {
       {selected && !directions && (
         <div className="cmap-place-card">
           <button className="cmap-card-close" onClick={closeSelected}>✕</button>
-
           <div className="cmap-card-header">
-            <span className="cmap-card-icon">{selected.kind === 'university' ? '🎓' : selected.kind === 'seller' ? '🛍️' : '📍'}</span>
+            <span className="cmap-card-icon">
+              {selected.kind === 'university' ? '🎓' : selected.kind === 'seller' ? '🛍️' : selected.icon || '📍'}
+            </span>
             <div>
               <h3 className="cmap-card-title">{selected.name || selected.title}</h3>
               <p className="cmap-card-subtitle">
                 {selected.kind === 'university' && `${selected.type} • ${selected.city}`}
                 {selected.kind === 'seller' && `Rs. ${(selected.price || 0).toLocaleString()} • ${selected.category}`}
-                {selected.kind === 'place' && selected.fullName}
+                {selected.kind === 'place' && (selected.fullName || selected.category)}
               </p>
             </div>
           </div>
 
           {selected.programs && <p className="cmap-card-programs">📚 {selected.programs}</p>}
-
           {userLocation && (
             <p className="cmap-card-distance">
               📏 {getDistance(userLocation.lat, userLocation.lng, selected.lat, selected.lng)} km away
@@ -608,7 +472,11 @@ export default function CampusMap() {
           )}
 
           <div className="cmap-card-actions">
-            <button className="cmap-action-btn primary" onClick={() => getDirections(selected)} disabled={directionsLoading}>
+            <button
+              className="cmap-action-btn primary"
+              onClick={() => getDirections(selected)}
+              disabled={directionsLoading}
+            >
               {directionsLoading ? 'Getting route...' : '🧭 Directions'}
             </button>
             <a
@@ -617,7 +485,7 @@ export default function CampusMap() {
               rel="noopener noreferrer"
               className="cmap-action-btn secondary"
             >
-              Open in Google Maps
+              Google Maps
             </a>
           </div>
         </div>
