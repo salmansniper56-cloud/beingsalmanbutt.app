@@ -442,3 +442,18 @@ body {
   .layout-nav { gap: 2px; }
   .layout-nav a { padding: 5px 6px; font-size: 11px; }
 }
+
+/* Mobile bottom nav additions */
+.mobile-nav-post {
+  background: var(--ck-purple);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff !important;
+  font-size: 0;
+  padding: 0;
+}
+.mobile-nav-post svg { color: #fff; }
