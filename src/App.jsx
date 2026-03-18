@@ -17,6 +17,7 @@ import BoostAd from './pages/BoostAd';
 import Profile from './pages/Profile';
 import ChatList from './pages/ChatList';
 import ChatThread from './pages/ChatThread';
+import CampusMap from './pages/CampusMap';
 
 function LoadingScreen() {
   return (
@@ -112,6 +113,9 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Campus Map — public, no login required */}
+        <Route path="/map" element={<CampusMap />} />
 
         {/* Notes — public, no login required */}
         <Route path="/notes" element={<Notes />} />

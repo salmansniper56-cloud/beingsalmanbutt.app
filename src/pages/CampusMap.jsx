@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import './CampusMap.css';
+
+// Set Mapbox access token
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 const UNIVERSITIES = [
   { name: "FAST-NUCES Islamabad", city: "Islamabad", lat: 33.6844, lng: 73.0479, type: "Private", programs: "CS, Engineering, Business" },
@@ -24,425 +29,829 @@ const UNIVERSITIES = [
   { name: "Mehran UET", city: "Jamshoro", lat: 25.4236, lng: 68.3606, type: "Public", programs: "Engineering" },
   { name: "UET Taxila", city: "Taxila", lat: 33.7468, lng: 72.7921, type: "Public", programs: "Engineering" },
   { name: "COMSATS Lahore", city: "Lahore", lat: 31.4668, lng: 74.2826, type: "Public", programs: "CS, Engineering, Sciences" },
-  { name: "LUMS Lahore", city: "Lahore", lat: 31.4216, lng: 74.2691, type: "Private", programs: "Business, CS, Law" },
   { name: "Aga Khan University", city: "Karachi", lat: 24.8607, lng: 67.0648, type: "Private", programs: "Medical, Nursing" },
   { name: "University of Peshawar", city: "Peshawar", lat: 34.0139, lng: 71.5377, type: "Public", programs: "Sciences, Arts, Law" },
   { name: "University of Sindh", city: "Jamshoro", lat: 25.4300, lng: 68.3700, type: "Public", programs: "Sciences, Arts" },
 ];
 
 export default function CampusMap() {
-  const mapRef         = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const markersRef     = useRef([]);
-  const routeLayerRef  = useRef(null);
-  const userMarkerRef  = useRef(null);
+  // Refs
+  const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markersRef = useRef([]);
+  const userMarkerRef = useRef(null);
+  const watchIdRef = useRef(null);
 
-  const [leafletLoaded, setLeafletLoaded]   = useState(false);
-  const [userLocation, setUserLocation]     = useState(null);
-  const [locating, setLocating]             = useState(false);
-  const [selected, setSelected]             = useState(null);
-  const [sellers, setSellers]               = useState([]);
-  const [activeTab, setActiveTab]           = useState('universities');
-  const [search, setSearch]                 = useState('');
-  const [searchResults, setSearchResults]   = useState([]);
-  const [searching, setSearching]           = useState(false);
-  const [directions, setDirections]         = useState(null);
+  // State
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [tracking, setTracking] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [sellers, setSellers] = useState([]);
+  const [activeTab, setActiveTab] = useState('universities');
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [directions, setDirections] = useState(null);
   const [directionsLoading, setDirectionsLoading] = useState(false);
-  const [nearby, setNearby]                 = useState([]);
+  const [nearby, setNearby] = useState([]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [terrain3D, setTerrain3D] = useState(true);
 
-  // Load Leaflet
-  useEffect(() => {
-    if (window.L) { setLeafletLoaded(true); return; }
-    const link  = document.createElement('link');
-    link.rel    = 'stylesheet';
-    link.href   = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-    const script    = document.createElement('script');
-    script.src      = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload   = () => setLeafletLoaded(true);
-    document.head.appendChild(script);
+  // Create custom marker element
+  const createMarkerElement = useCallback((color, emoji, isPulsing = false) => {
+    const el = document.createElement('div');
+    el.className = 'cmap-marker';
+    el.innerHTML = `
+      <div class="cmap-marker-pin" style="background: ${color}">
+        <span class="cmap-marker-emoji">${emoji}</span>
+      </div>
+      ${isPulsing ? `<div class="cmap-marker-pulse" style="background: ${color}"></div>` : ''}
+    `;
+    return el;
   }, []);
 
-  // Init map
+  // Create user location marker
+  const createUserMarkerElement = useCallback(() => {
+    const el = document.createElement('div');
+    el.className = 'cmap-user-marker';
+    el.innerHTML = `
+      <div class="cmap-user-accuracy"></div>
+      <div class="cmap-user-dot">
+        <div class="cmap-user-heading"></div>
+      </div>
+    `;
+    return el;
+  }, []);
+
+  // Initialize map
   useEffect(() => {
-    if (!leafletLoaded || !mapRef.current || mapInstanceRef.current) return;
-    const L   = window.L;
-    const map = L.map(mapRef.current, { zoomControl: true }).setView([30.3753, 69.3451], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-    }).addTo(map);
-    mapInstanceRef.current = map;
-    plotUniversities();
-  }, [leafletLoaded]);
+    if (mapRef.current || !mapContainerRef.current) return;
+
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: 'mapbox://styles/mapbox/standard',
+      center: [69.3451, 30.3753], // Pakistan center [lng, lat]
+      zoom: 5,
+      pitch: 45,
+      bearing: -17.6,
+      antialias: true,
+    });
+
+    // Add navigation controls
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+
+    map.on('load', () => {
+      // Add 3D terrain
+      map.addSource('mapbox-dem', {
+        type: 'raster-dem',
+        url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+        tileSize: 512,
+        maxzoom: 14,
+      });
+      map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+
+      // Add atmospheric sky
+      map.addLayer({
+        id: 'sky',
+        type: 'sky',
+        paint: {
+          'sky-type': 'atmosphere',
+          'sky-atmosphere-sun': [0.0, 90.0],
+          'sky-atmosphere-sun-intensity': 15,
+        },
+      });
+
+      // Add 3D buildings
+      const layers = map.getStyle().layers;
+      const labelLayerId = layers?.find(
+        (layer) => layer.type === 'symbol' && layer.layout?.['text-field']
+      )?.id;
+
+      if (labelLayerId) {
+        map.addLayer(
+          {
+            id: '3d-buildings',
+            source: 'composite',
+            'source-layer': 'building',
+            filter: ['==', 'extrude', 'true'],
+            type: 'fill-extrusion',
+            minzoom: 15,
+            paint: {
+              'fill-extrusion-color': '#aaa',
+              'fill-extrusion-height': ['get', 'height'],
+              'fill-extrusion-base': ['get', 'min_height'],
+              'fill-extrusion-opacity': 0.6,
+            },
+          },
+          labelLayerId
+        );
+      }
+
+      setMapLoaded(true);
+      mapRef.current = map;
+    });
+
+    return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
 
   // Fetch sellers from Firestore
   useEffect(() => {
     const fetchSellers = async () => {
       try {
         const snap = await getDocs(collection(db, 'ads'));
-        const ads  = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-          .filter(ad => ad.lat && ad.lng);
+        const ads = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((ad) => ad.lat && ad.lng);
         setSellers(ads);
       } catch (err) {
-        console.error(err);
+        console.error('Failed to fetch sellers:', err);
       }
     };
     fetchSellers();
   }, []);
 
-  const makeIcon = (color, emoji = '') => {
-    const L = window.L;
-    return L.divIcon({
-      className: '',
-      html: `<div class="cmap-pin" style="background:${color}">${emoji}</div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-    });
-  };
-
-  const clearMarkers = () => {
-    const map = mapInstanceRef.current;
-    markersRef.current.forEach(m => map.removeLayer(m));
+  // Clear all markers
+  const clearMarkers = useCallback(() => {
+    markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
-  };
+  }, []);
 
-  const plotUniversities = () => {
-    if (!mapInstanceRef.current || !leafletLoaded) return;
-    const L   = window.L;
-    const map = mapInstanceRef.current;
+  // Plot universities
+  const plotUniversities = useCallback(() => {
+    if (!mapRef.current || !mapLoaded) return;
     clearMarkers();
-    UNIVERSITIES.forEach(u => {
-      const color  = u.type === 'Private' ? '#534AB7' : '#1D9E75';
-      const marker = L.marker([u.lat, u.lng], { icon: makeIcon(color, '🎓') })
-        .addTo(map)
-        .on('click', () => setSelected({ ...u, kind: 'university' }));
+
+    UNIVERSITIES.forEach((u) => {
+      const color = u.type === 'Private' ? '#AF52DE' : '#34C759';
+      const el = createMarkerElement(color, '🎓');
+
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([u.lng, u.lat])
+        .addTo(mapRef.current);
+
+      el.addEventListener('click', () => {
+        setSelected({ ...u, kind: 'university' });
+        setSheetOpen(true);
+        mapRef.current.flyTo({
+          center: [u.lng, u.lat],
+          zoom: 14,
+          pitch: 60,
+          duration: 1500,
+        });
+      });
+
       markersRef.current.push(marker);
     });
-  };
+  }, [mapLoaded, clearMarkers, createMarkerElement]);
 
-  const plotSellers = () => {
-    if (!mapInstanceRef.current || !leafletLoaded) return;
-    const L   = window.L;
-    const map = mapInstanceRef.current;
+  // Plot sellers
+  const plotSellers = useCallback(() => {
+    if (!mapRef.current || !mapLoaded) return;
     clearMarkers();
-    sellers.forEach(ad => {
-      const marker = L.marker([ad.lat, ad.lng], { icon: makeIcon('#E24B4A', '🛍️') })
-        .addTo(map)
-        .on('click', () => setSelected({ ...ad, kind: 'seller' }));
+
+    sellers.forEach((ad) => {
+      const el = createMarkerElement('#FF3B30', '🛍️');
+
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([ad.lng, ad.lat])
+        .addTo(mapRef.current);
+
+      el.addEventListener('click', () => {
+        setSelected({ ...ad, kind: 'seller' });
+        setSheetOpen(true);
+        mapRef.current.flyTo({
+          center: [ad.lng, ad.lat],
+          zoom: 14,
+          pitch: 60,
+          duration: 1500,
+        });
+      });
+
       markersRef.current.push(marker);
     });
-  };
+  }, [mapLoaded, sellers, clearMarkers, createMarkerElement]);
 
-  const plotAll = () => {
-    if (!mapInstanceRef.current || !leafletLoaded) return;
-    const L   = window.L;
-    const map = mapInstanceRef.current;
+  // Plot all markers
+  const plotAll = useCallback(() => {
+    if (!mapRef.current || !mapLoaded) return;
     clearMarkers();
-    UNIVERSITIES.forEach(u => {
-      const color  = u.type === 'Private' ? '#534AB7' : '#1D9E75';
-      const marker = L.marker([u.lat, u.lng], { icon: makeIcon(color, '🎓') })
-        .addTo(map)
-        .on('click', () => setSelected({ ...u, kind: 'university' }));
-      markersRef.current.push(marker);
-    });
-    sellers.forEach(ad => {
-      const marker = L.marker([ad.lat, ad.lng], { icon: makeIcon('#E24B4A', '🛍️') })
-        .addTo(map)
-        .on('click', () => setSelected({ ...ad, kind: 'seller' }));
-      markersRef.current.push(marker);
-    });
-  };
 
+    UNIVERSITIES.forEach((u) => {
+      const color = u.type === 'Private' ? '#AF52DE' : '#34C759';
+      const el = createMarkerElement(color, '🎓');
+
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([u.lng, u.lat])
+        .addTo(mapRef.current);
+
+      el.addEventListener('click', () => {
+        setSelected({ ...u, kind: 'university' });
+        setSheetOpen(true);
+      });
+
+      markersRef.current.push(marker);
+    });
+
+    sellers.forEach((ad) => {
+      const el = createMarkerElement('#FF3B30', '🛍️');
+
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([ad.lng, ad.lat])
+        .addTo(mapRef.current);
+
+      el.addEventListener('click', () => {
+        setSelected({ ...ad, kind: 'seller' });
+        setSheetOpen(true);
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, [mapLoaded, sellers, clearMarkers, createMarkerElement]);
+
+  // Update markers based on active tab
   useEffect(() => {
-    if (!leafletLoaded || !mapInstanceRef.current) return;
+    if (!mapLoaded) return;
     if (activeTab === 'universities') plotUniversities();
     else if (activeTab === 'sellers') plotSellers();
     else if (activeTab === 'all') plotAll();
-  }, [activeTab, leafletLoaded, sellers]);
+  }, [activeTab, mapLoaded, plotUniversities, plotSellers, plotAll]);
 
-  // Live location
-  const getLocation = () => {
+  // Distance calculation (Haversine)
+  const getDistance = useCallback((lat1, lng1, lat2, lng2) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  }, []);
+
+  // Update user location on map
+  const updateUserLocationOnMap = useCallback(
+    (lat, lng, heading = null) => {
+      if (!mapRef.current) return;
+
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setLngLat([lng, lat]);
+        if (heading !== null) {
+          const headingEl = userMarkerRef.current.getElement().querySelector('.cmap-user-heading');
+          if (headingEl) {
+            headingEl.style.transform = `rotate(${heading}deg)`;
+          }
+        }
+      } else {
+        const el = createUserMarkerElement();
+        userMarkerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .addTo(mapRef.current);
+      }
+    },
+    [createUserMarkerElement]
+  );
+
+  // Get current location
+  const getLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+
     setLocating(true);
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setUserLocation({ lat, lng });
         setLocating(false);
-        const L   = window.L;
-        const map = mapInstanceRef.current;
-        if (userMarkerRef.current) map.removeLayer(userMarkerRef.current);
-        userMarkerRef.current = L.marker([lat, lng], {
-          icon: makeIcon('#E24B4A', '📍'),
-          zIndexOffset: 1000,
-        }).addTo(map).bindPopup('You are here').openPopup();
-        map.flyTo([lat, lng], 13, { duration: 1.5 });
+
+        updateUserLocationOnMap(lat, lng);
+
+        mapRef.current?.flyTo({
+          center: [lng, lat],
+          zoom: 15,
+          pitch: 60,
+          duration: 2000,
+        });
 
         // Find nearby universities
-        const withDist = UNIVERSITIES.map(u => ({
+        const withDist = UNIVERSITIES.map((u) => ({
           ...u,
           distance: getDistance(lat, lng, u.lat, u.lng),
-        })).sort((a, b) => a.distance - b.distance).slice(0, 5);
+        }))
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, 5);
         setNearby(withDist);
+        setSheetOpen(true);
       },
-      () => { setLocating(false); alert('Could not get your location.'); }
+      () => {
+        setLocating(false);
+        alert('Could not get your location. Please enable location services.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  };
+  }, [getDistance, updateUserLocationOnMap]);
 
-  const getDistance = (lat1, lng1, lat2, lng2) => {
-    const R   = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a   = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
-    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-  };
+  // Start continuous tracking
+  const startTracking = useCallback(() => {
+    if (!navigator.geolocation) return;
 
-  // Search places using Nominatim (free)
-  const searchPlace = async (q) => {
-    if (!q.trim()) { setSearchResults([]); return; }
+    setTracking(true);
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng, heading } = pos.coords;
+        setUserLocation({ lat, lng });
+        updateUserLocationOnMap(lat, lng, heading);
+      },
+      (error) => {
+        console.error('Tracking error:', error);
+        setTracking(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+  }, [updateUserLocationOnMap]);
+
+  // Stop tracking
+  const stopTracking = useCallback(() => {
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setTracking(false);
+  }, []);
+
+  // Search places using Mapbox Geocoding
+  const searchPlace = useCallback(async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
     setSearching(true);
     try {
-      const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + ' Pakistan')}&format=json&limit=5`);
+      const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+        query
+      )}.json?access_token=${token}&country=pk&limit=5&types=place,locality,neighborhood,address,poi`;
+
+      const res = await fetch(url);
       const data = await res.json();
-      setSearchResults(data);
+
+      setSearchResults(
+        data.features?.map((f) => ({
+          name: f.text,
+          fullName: f.place_name,
+          lat: f.center[1],
+          lng: f.center[0],
+        })) || []
+      );
     } catch (err) {
-      console.error(err);
+      console.error('Search error:', err);
     } finally {
       setSearching(false);
     }
-  };
+  }, []);
 
-  const flyToPlace = (place) => {
-    const map = mapInstanceRef.current;
-    const L   = window.L;
-    map.flyTo([place.lat, place.lon], 14, { duration: 1.5 });
+  // Fly to searched place
+  const flyToPlace = useCallback((place) => {
+    mapRef.current?.flyTo({
+      center: [place.lng, place.lat],
+      zoom: 14,
+      pitch: 60,
+      duration: 1500,
+    });
     setSearchResults([]);
-    setSearch(place.display_name.split(',')[0]);
-  };
+    setSearch(place.name);
+  }, []);
 
-  // Get directions using OSRM (free)
-  const getDirections = async (dest) => {
-    if (!userLocation) { alert('Please get your location first!'); return; }
-    setDirectionsLoading(true);
-    setSelected(null);
-    try {
-      const url  = `https://router.project-osrm.org/route/v1/driving/${userLocation.lng},${userLocation.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
-      const res  = await fetch(url);
-      const data = await res.json();
-      if (data.routes?.length) {
-        const route    = data.routes[0];
-        const coords   = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-        const L        = window.L;
-        const map      = mapInstanceRef.current;
-        if (routeLayerRef.current) map.removeLayer(routeLayerRef.current);
-        routeLayerRef.current = L.polyline(coords, {
-          color: '#534AB7', weight: 5, opacity: 0.8,
-        }).addTo(map);
-        map.fitBounds(routeLayerRef.current.getBounds(), { padding: [40, 40] });
-        setDirections({
-          distance: (route.distance / 1000).toFixed(1),
-          duration: Math.round(route.duration / 60),
-          dest: dest.name || dest.title,
-        });
+  // Get directions using OSRM
+  const getDirections = useCallback(
+    async (dest) => {
+      if (!userLocation) {
+        alert('Please get your location first!');
+        return;
       }
-    } catch (err) {
-      alert('Could not get directions. Please try again.');
-    } finally {
-      setDirectionsLoading(false);
-    }
-  };
 
-  const clearDirections = () => {
-    if (routeLayerRef.current && mapInstanceRef.current) {
-      mapInstanceRef.current.removeLayer(routeLayerRef.current);
-      routeLayerRef.current = null;
+      setDirectionsLoading(true);
+      setSelected(null);
+
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${userLocation.lng},${userLocation.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.routes?.length) {
+          const route = data.routes[0];
+          const coordinates = route.geometry.coordinates;
+
+          // Remove existing route layers
+          if (mapRef.current.getLayer('route')) mapRef.current.removeLayer('route');
+          if (mapRef.current.getLayer('route-outline')) mapRef.current.removeLayer('route-outline');
+          if (mapRef.current.getSource('route')) mapRef.current.removeSource('route');
+
+          // Add route source
+          mapRef.current.addSource('route', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates,
+              },
+            },
+          });
+
+          // Add route outline (shadow)
+          mapRef.current.addLayer({
+            id: 'route-outline',
+            type: 'line',
+            source: 'route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: {
+              'line-color': '#1a73e8',
+              'line-width': 10,
+              'line-opacity': 0.3,
+            },
+          });
+
+          // Add main route line
+          mapRef.current.addLayer({
+            id: 'route',
+            type: 'line',
+            source: 'route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: {
+              'line-color': '#007AFF',
+              'line-width': 6,
+            },
+          });
+
+          // Fit bounds
+          const bounds = coordinates.reduce(
+            (bounds, coord) => bounds.extend(coord),
+            new mapboxgl.LngLatBounds(coordinates[0], coordinates[0])
+          );
+
+          mapRef.current.fitBounds(bounds, {
+            padding: { top: 100, bottom: 300, left: 50, right: 50 },
+            pitch: 45,
+            duration: 1500,
+          });
+
+          setDirections({
+            distance: (route.distance / 1000).toFixed(1),
+            duration: Math.round(route.duration / 60),
+            dest: dest.name || dest.title,
+          });
+          setSheetOpen(true);
+        }
+      } catch (err) {
+        console.error('Directions error:', err);
+        alert('Could not get directions. Please try again.');
+      } finally {
+        setDirectionsLoading(false);
+      }
+    },
+    [userLocation]
+  );
+
+  // Clear directions
+  const clearDirections = useCallback(() => {
+    if (mapRef.current) {
+      if (mapRef.current.getLayer('route')) mapRef.current.removeLayer('route');
+      if (mapRef.current.getLayer('route-outline')) mapRef.current.removeLayer('route-outline');
+      if (mapRef.current.getSource('route')) mapRef.current.removeSource('route');
     }
     setDirections(null);
-  };
+  }, []);
+
+  // Toggle 3D terrain
+  const toggleTerrain = useCallback(() => {
+    if (!mapRef.current) return;
+
+    if (terrain3D) {
+      mapRef.current.setTerrain(null);
+      mapRef.current.setPitch(0);
+    } else {
+      mapRef.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+      mapRef.current.setPitch(45);
+    }
+    setTerrain3D(!terrain3D);
+  }, [terrain3D]);
+
+  // Reset map view
+  const resetView = useCallback(() => {
+    mapRef.current?.flyTo({
+      center: [69.3451, 30.3753],
+      zoom: 5,
+      pitch: 45,
+      bearing: -17.6,
+      duration: 2000,
+    });
+  }, []);
 
   return (
     <div className="cmap-page">
-      {/* Header */}
-      <div className="cmap-header">
-        <div className="cmap-header-left">
-          <h1 className="cmap-title">🗺️ Campus Map</h1>
-          <p className="cmap-sub">Universities · Sellers · Directions · Live Location</p>
+      {/* Map container */}
+      <div ref={mapContainerRef} className="cmap-map" />
+
+      {/* Loading overlay */}
+      {!mapLoaded && (
+        <div className="cmap-loading">
+          <div className="cmap-loading-spinner" />
+          <p>Loading 3D Map...</p>
         </div>
-        <button className="cmap-locate-btn" onClick={getLocation} disabled={locating}>
-          {locating ? '📡 Locating...' : '📍 My Location'}
+      )}
+
+      {/* Search bar */}
+      <div className="cmap-search-container">
+        <div className="cmap-search-icon">🔍</div>
+        <input
+          className="cmap-search"
+          placeholder="Search any place in Pakistan..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            searchPlace(e.target.value);
+          }}
+        />
+        {searching && <div className="cmap-search-spinner" />}
+        {searchResults.length > 0 && (
+          <div className="cmap-search-results">
+            {searchResults.map((r, i) => (
+              <div key={i} className="cmap-search-item" onClick={() => flyToPlace(r)}>
+                <span className="cmap-search-item-icon">📍</span>
+                <div className="cmap-search-item-text">
+                  <span className="cmap-search-item-name">{r.name}</span>
+                  <span className="cmap-search-item-full">{r.fullName}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Floating action buttons */}
+      <div className="cmap-fab-container">
+        <button
+          className="cmap-fab"
+          onClick={toggleTerrain}
+          title={terrain3D ? 'Disable 3D' : 'Enable 3D'}
+        >
+          {terrain3D ? '🗻' : '🗺️'}
+        </button>
+        <button className="cmap-fab" onClick={resetView} title="Reset view">
+          🧭
+        </button>
+        <button
+          className={`cmap-fab cmap-fab-location ${tracking ? 'active' : ''}`}
+          onClick={() => {
+            if (tracking) {
+              stopTracking();
+            } else {
+              getLocation();
+              startTracking();
+            }
+          }}
+          disabled={locating}
+          title={tracking ? 'Stop tracking' : 'My location'}
+        >
+          {locating ? '...' : tracking ? '📡' : '📍'}
         </button>
       </div>
 
-      <div className="cmap-body">
-        {/* Left panel */}
-        <div className="cmap-panel">
+      {/* Legend */}
+      <div className="cmap-legend">
+        <div className="cmap-legend-item">
+          <div className="cmap-legend-dot" style={{ background: '#34C759' }} />
+          <span>Public</span>
+        </div>
+        <div className="cmap-legend-item">
+          <div className="cmap-legend-dot" style={{ background: '#AF52DE' }} />
+          <span>Private</span>
+        </div>
+        <div className="cmap-legend-item">
+          <div className="cmap-legend-dot" style={{ background: '#FF3B30' }} />
+          <span>Seller</span>
+        </div>
+      </div>
 
-          {/* Search */}
-          <div className="cmap-search-wrap">
-            <input
-              className="cmap-search"
-              placeholder="Search any place in Pakistan..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); searchPlace(e.target.value); }}
-            />
-            {searching && <span className="cmap-search-spin">⏳</span>}
-            {searchResults.length > 0 && (
-              <div className="cmap-search-results">
-                {searchResults.map((r, i) => (
-                  <div key={i} className="cmap-search-item" onClick={() => flyToPlace(r)}>
-                    <span>📍</span>
-                    <span>{r.display_name.split(',').slice(0,2).join(', ')}</span>
-                  </div>
-                ))}
+      {/* Bottom sheet */}
+      <div className={`cmap-bottom-sheet ${sheetOpen ? 'open' : ''}`}>
+        <div className="cmap-sheet-handle" onClick={() => setSheetOpen(!sheetOpen)} />
+
+        {/* Tabs */}
+        <div className="cmap-tabs">
+          {[
+            { key: 'universities', label: '🎓 Universities' },
+            { key: 'sellers', label: '🛍️ Sellers' },
+            { key: 'all', label: '🌍 All' },
+          ].map((t) => (
+            <button
+              key={t.key}
+              className={`cmap-tab ${activeTab === t.key ? 'active' : ''}`}
+              onClick={() => setActiveTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Directions card */}
+        {directions && (
+          <div className="cmap-directions-card">
+            <div className="cmap-directions-header">
+              <span className="cmap-directions-icon">🧭</span>
+              <div className="cmap-directions-info">
+                <h3>Directions to {directions.dest}</h3>
+                <p>
+                  {directions.distance} km • {directions.duration} min drive
+                </p>
               </div>
-            )}
-          </div>
-
-          {/* Tabs */}
-          <div className="cmap-tabs">
-            {[
-              { key: 'universities', label: '🎓 Universities' },
-              { key: 'sellers',      label: '🛍️ Sellers' },
-              { key: 'all',          label: '🌍 All' },
-            ].map(t => (
-              <button
-                key={t.key}
-                className={`cmap-tab ${activeTab === t.key ? 'active' : ''}`}
-                onClick={() => setActiveTab(t.key)}
-              >
-                {t.label}
+              <button className="cmap-directions-close" onClick={clearDirections}>
+                ✕
               </button>
-            ))}
-          </div>
-
-          {/* Directions result */}
-          {directions && (
-            <div className="cmap-directions">
-              <div className="cmap-directions-header">
-                <span>🧭 Directions</span>
-                <button onClick={clearDirections}>✕</button>
-              </div>
-              <p className="cmap-directions-dest">To: {directions.dest}</p>
-              <div className="cmap-directions-stats">
-                <div><span>{directions.distance} km</span><small>Distance</small></div>
-                <div><span>{directions.duration} min</span><small>Drive time</small></div>
-              </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Nearby universities */}
-          {nearby.length > 0 && (
-            <div className="cmap-nearby">
-              <p className="cmap-section-label">📍 Nearby universities</p>
-              {nearby.map((u, i) => (
-                <div key={i} className="cmap-nearby-item" onClick={() => {
-                  mapInstanceRef.current?.flyTo([u.lat, u.lng], 14, { duration: 1 });
-                  setSelected({ ...u, kind: 'university' });
-                }}>
-                  <div>
-                    <p className="cmap-nearby-name">{u.name}</p>
-                    <p className="cmap-nearby-dist">{u.distance} km away</p>
-                  </div>
-                  <button
-                    className="cmap-dir-btn"
-                    onClick={e => { e.stopPropagation(); getDirections(u); }}
-                    disabled={directionsLoading}
+        {/* Selected item */}
+        {selected && (
+          <div className="cmap-selected-card">
+            <button className="cmap-selected-close" onClick={() => setSelected(null)}>
+              ✕
+            </button>
+            {selected.kind === 'university' ? (
+              <>
+                <span
+                  className="cmap-selected-badge"
+                  style={{
+                    background: selected.type === 'Private' ? '#F5E6FF' : '#E8FFF0',
+                    color: selected.type === 'Private' ? '#7B1FA2' : '#1B5E20',
+                  }}
+                >
+                  {selected.type}
+                </span>
+                <h3 className="cmap-selected-name">{selected.name}</h3>
+                <p className="cmap-selected-info">📍 {selected.city}</p>
+                <p className="cmap-selected-info">📚 {selected.programs}</p>
+                {userLocation && (
+                  <p className="cmap-selected-info">
+                    📏 {getDistance(userLocation.lat, userLocation.lng, selected.lat, selected.lng)}{' '}
+                    km away
+                  </p>
+                )}
+                <div className="cmap-selected-actions">
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(selected.name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cmap-btn secondary"
                   >
-                    {directionsLoading ? '...' : '🧭'}
+                    Google Maps
+                  </a>
+                  <button
+                    className="cmap-btn primary"
+                    onClick={() => getDirections(selected)}
+                    disabled={directionsLoading || !userLocation}
+                  >
+                    {directionsLoading
+                      ? 'Loading...'
+                      : !userLocation
+                      ? 'Get location first'
+                      : '🧭 Directions'}
                   </button>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Universities list */}
-          {activeTab === 'universities' && nearby.length === 0 && (
-            <div className="cmap-list">
-              <p className="cmap-section-label">All universities</p>
-              {UNIVERSITIES.map((u, i) => (
-                <div key={i} className="cmap-list-item" onClick={() => {
-                  mapInstanceRef.current?.flyTo([u.lat, u.lng], 14, { duration: 1 });
-                  setSelected({ ...u, kind: 'university' });
-                }}>
-                  <div className="cmap-list-dot" style={{ background: u.type === 'Private' ? '#534AB7' : '#1D9E75' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="cmap-list-name">{u.name}</p>
-                    <p className="cmap-list-sub">{u.city} · {u.type}</p>
-                  </div>
-                  {userLocation && (
-                    <button
-                      className="cmap-dir-btn"
-                      onClick={e => { e.stopPropagation(); getDirections(u); }}
-                      disabled={directionsLoading}
-                    >
-                      🧭
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Map */}
-        <div className="cmap-map-wrap">
-          {!leafletLoaded && (
-            <div className="cmap-map-loading">
-              <div className="spinner" style={{ width: 36, height: 36, borderWidth: 2 }} />
-              <p>Loading map...</p>
-            </div>
-          )}
-          <div ref={mapRef} className="cmap-map" />
-
-          {/* Legend */}
-          <div className="cmap-legend">
-            <div className="cmap-legend-item"><div className="cmap-legend-dot" style={{ background: '#1D9E75' }} /><span>Public uni</span></div>
-            <div className="cmap-legend-item"><div className="cmap-legend-dot" style={{ background: '#534AB7' }} /><span>Private uni</span></div>
-            <div className="cmap-legend-item"><div className="cmap-legend-dot" style={{ background: '#E24B4A' }} /><span>Seller / You</span></div>
+              </>
+            ) : (
+              <>
+                <span className="cmap-selected-badge" style={{ background: '#FFEBEE', color: '#C62828' }}>
+                  Seller
+                </span>
+                <h3 className="cmap-selected-name">{selected.title}</h3>
+                <p className="cmap-selected-info">💰 Rs. {(selected.price || 0).toLocaleString()}</p>
+                <p className="cmap-selected-info">📦 {selected.category}</p>
+                {userLocation && (
+                  <p className="cmap-selected-info">
+                    📏 {getDistance(userLocation.lat, userLocation.lng, selected.lat, selected.lng)}{' '}
+                    km away
+                  </p>
+                )}
+                <button
+                  className="cmap-btn primary"
+                  onClick={() => getDirections({ ...selected, name: selected.title })}
+                  disabled={directionsLoading || !userLocation}
+                >
+                  {directionsLoading
+                    ? 'Loading...'
+                    : !userLocation
+                    ? 'Get location first'
+                    : '🧭 Directions'}
+                </button>
+              </>
+            )}
           </div>
+        )}
 
-          {/* Selected popup */}
-          {selected && (
-            <div className="cmap-popup">
-              <button className="cmap-popup-close" onClick={() => setSelected(null)}>✕</button>
-              {selected.kind === 'university' ? (
-                <>
-                  <span className="cmap-popup-badge" style={{ background: selected.type === 'Private' ? '#EEEDFE' : '#E1F5EE', color: selected.type === 'Private' ? '#3C3489' : '#0F6E56' }}>
-                    {selected.type}
-                  </span>
-                  <h3 className="cmap-popup-name">{selected.name}</h3>
-                  <p className="cmap-popup-info">📍 {selected.city}</p>
-                  <p className="cmap-popup-info">📚 {selected.programs}</p>
-                  {userLocation && (
-                    <p className="cmap-popup-info">📏 {getDistance(userLocation.lat, userLocation.lng, selected.lat, selected.lng)} km from you</p>
-                  )}
-                  <div className="cmap-popup-btns">
-                    <a href={`https://www.google.com/maps/search/${encodeURIComponent(selected.name)}`} target="_blank" rel="noopener noreferrer" className="cmap-popup-btn secondary">
-                      Google Maps
-                    </a>
-                    <button className="cmap-popup-btn primary" onClick={() => getDirections(selected)} disabled={directionsLoading || !userLocation}>
-                      {directionsLoading ? 'Loading...' : !userLocation ? 'Get location first' : '🧭 Directions'}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span className="cmap-popup-badge" style={{ background: '#FAECE7', color: '#712B13' }}>Seller</span>
-                  <h3 className="cmap-popup-name">{selected.title}</h3>
-                  <p className="cmap-popup-info">💰 Rs. {(selected.price || 0).toLocaleString()}</p>
-                  <p className="cmap-popup-info">📦 {selected.category}</p>
-                  {userLocation && (
-                    <p className="cmap-popup-info">📏 {getDistance(userLocation.lat, userLocation.lng, selected.lat, selected.lng)} km from you</p>
-                  )}
-                  <div className="cmap-popup-btns">
-                    <button className="cmap-popup-btn primary" onClick={() => getDirections({ ...selected, name: selected.title })} disabled={directionsLoading || !userLocation}>
-                      {directionsLoading ? 'Loading...' : !userLocation ? 'Get location first' : '🧭 Directions'}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Nearby universities */}
+        {nearby.length > 0 && !selected && (
+          <div className="cmap-nearby">
+            <h4 className="cmap-section-title">📍 Nearby Universities</h4>
+            {nearby.map((u, i) => (
+              <div
+                key={i}
+                className="cmap-nearby-item"
+                onClick={() => {
+                  mapRef.current?.flyTo({
+                    center: [u.lng, u.lat],
+                    zoom: 14,
+                    pitch: 60,
+                    duration: 1500,
+                  });
+                  setSelected({ ...u, kind: 'university' });
+                }}
+              >
+                <div className="cmap-nearby-info">
+                  <p className="cmap-nearby-name">{u.name}</p>
+                  <p className="cmap-nearby-distance">{u.distance} km away</p>
+                </div>
+                <button
+                  className="cmap-nearby-dir"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    getDirections(u);
+                  }}
+                  disabled={directionsLoading}
+                >
+                  🧭
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Universities list */}
+        {activeTab === 'universities' && nearby.length === 0 && !selected && (
+          <div className="cmap-list">
+            <h4 className="cmap-section-title">All Universities</h4>
+            {UNIVERSITIES.map((u, i) => (
+              <div
+                key={i}
+                className="cmap-list-item"
+                onClick={() => {
+                  mapRef.current?.flyTo({
+                    center: [u.lng, u.lat],
+                    zoom: 14,
+                    pitch: 60,
+                    duration: 1500,
+                  });
+                  setSelected({ ...u, kind: 'university' });
+                }}
+              >
+                <div
+                  className="cmap-list-dot"
+                  style={{ background: u.type === 'Private' ? '#AF52DE' : '#34C759' }}
+                />
+                <div className="cmap-list-info">
+                  <p className="cmap-list-name">{u.name}</p>
+                  <p className="cmap-list-sub">
+                    {u.city} • {u.type}
+                  </p>
+                </div>
+                {userLocation && (
+                  <button
+                    className="cmap-list-dir"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      getDirections(u);
+                    }}
+                    disabled={directionsLoading}
+                  >
+                    🧭
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
