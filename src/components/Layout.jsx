@@ -230,6 +230,7 @@ export default function Layout({ children }) {
                   <div className="right-user-name">{userProfile.displayName || 'User'}</div>
                 </div>
               </Link>
+              <Link to="/settings" className="right-switch-btn">Switch</Link>
             </div>
           )}
 

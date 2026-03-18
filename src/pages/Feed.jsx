@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { getPosts, togglePostLike, isPostLiked } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import PostCard from '../components/PostCard';
@@ -12,6 +13,8 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
   const [postLiked, setPostLiked] = useState({});
   const [createPostOpen, setCreatePostOpen] = useState(false);
+  const [feedMode, setFeedMode] = useState('posts');
+  const [category, setCategory] = useState('');
 
   const loadPosts = useCallback(async () => {
     try {
@@ -29,15 +32,8 @@ export default function Feed() {
 
   useEffect(() => {
     setLoading(true);
-    (feedMode === 'ads' ? loadAds() : loadPosts()).finally(() => setLoading(false));
-  }, [feedMode, loadAds, loadPosts]);
-
-  async function handleLike(adId) {
-    if (!user?.uid) return;
-    await toggleLike(adId, user.uid);
-    setAds(prev => prev.map(a => a.id === adId ? { ...a, likeCount: (a.likeCount ?? 0) + (liked[adId] ? -1 : 1) } : a));
-    setLiked(prev => ({ ...prev, [adId]: !prev[adId] }));
-  }
+    loadPosts().finally(() => setLoading(false));
+  }, [loadPosts]);
 
   async function handlePostLike(postId) {
     if (!user?.uid) return;
@@ -93,17 +89,11 @@ export default function Feed() {
             ))}
           </div>
         )
-      ) : ads.length === 0 ? (
+      ) : (
         <div className="empty-state">
           <div className="empty-state-icon">🏷️</div>
-          <p>No listings yet. Be the first!</p>
-          <Link to="/ad/create" className="btn btn-primary">Create listing</Link>
-        </div>
-      ) : (
-        <div className="feed-grid">
-          {ads.map(ad => (
-            <AdCard key={ad.id} ad={ad} likeCount={ad.likeCount} isLiked={!!liked[ad.id]} onLike={() => handleLike(ad.id)} showSeller />
-          ))}
+          <p>Visit the Marketplace for listings!</p>
+          <Link to="/marketplace" className="btn btn-primary">Go to Marketplace</Link>
         </div>
       )}
 
