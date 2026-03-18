@@ -99,6 +99,7 @@ export default function StoryViewer({ storyId, stories, onClose }) {
 
   const creatorName = creator?.displayName || creator?.email?.split('@')[0] || 'User';
   const creatorPhoto = creator?.photoURL;
+  const isOwnStory = user?.uid === currentStory?.createdBy;
 
   return (
     <div className="story-viewer-overlay" onClick={onClose}>
@@ -154,8 +155,8 @@ export default function StoryViewer({ storyId, stories, onClose }) {
           <div className="story-caption">{currentStory.caption}</div>
         )}
 
-        {/* Like Button */}
-        {user && (
+        {/* Like Button - Only for other people's stories */}
+        {user && !isOwnStory && (
           <div className="story-actions">
             <button
               className={`story-like-btn ${isLiked ? 'liked' : ''}`}
@@ -173,6 +174,13 @@ export default function StoryViewer({ storyId, stories, onClose }) {
               )}
               <span className="story-like-count">{likeCount}</span>
             </button>
+          </div>
+        )}
+
+        {/* View Insights for own story */}
+        {isOwnStory && (
+          <div className="story-actions">
+            <span className="story-view-insights">👁️ View Insights</span>
           </div>
         )}
 
