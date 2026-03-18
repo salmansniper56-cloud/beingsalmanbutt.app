@@ -1,52 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { getAds, getPosts, toggleLike, isLiked, togglePostLike, isPostLiked } from '../lib/firestore';
+import { getPosts, togglePostLike, isPostLiked } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
-import AdCard from '../components/AdCard';
 import PostCard from '../components/PostCard';
 import CreatePostModal from '../components/CreatePostModal';
 import StoriesList from '../components/StoriesList';
 import './Feed.css';
 
-function rankAds(ads) {
-  const now = new Date();
-  return [...ads].sort((a, b) => {
-    const aBoost = a.boostExpiresAt && new Date(a.boostExpiresAt) > now;
-    const bBoost = b.boostExpiresAt && new Date(b.boostExpiresAt) > now;
-    if (aBoost && !bBoost) return -1;
-    if (!aBoost && bBoost) return 1;
-    const aScore = (a.likeCount ?? 0) * 2 + (aBoost ? 100 : 0);
-    const bScore = (b.likeCount ?? 0) * 2 + (bBoost ? 100 : 0);
-    if (bScore !== aScore) return bScore - aScore;
-    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-  });
-}
-
 export default function Feed() {
   const { user } = useAuth();
-  const [feedMode, setFeedMode] = useState('posts');
-  const [ads, setAds] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [liked, setLiked] = useState({});
   const [postLiked, setPostLiked] = useState({});
-  const [category, setCategory] = useState('');
   const [createPostOpen, setCreatePostOpen] = useState(false);
-
-  const loadAds = useCallback(async () => {
-    try {
-      const { ads: list } = await getAds({ limitCount: 50 });
-      const filtered = category ? list.filter((a) => a.category === category) : list;
-      setAds(rankAds(filtered));
-      if (user?.uid) {
-        const likedMap = {};
-        await Promise.all(list.slice(0, 30).map(async (ad) => {
-          likedMap[ad.id] = await isLiked(ad.id, user.uid);
-        }));
-        setLiked(likedMap);
-      }
-    } catch (err) { console.error(err); }
-  }, [category, user?.uid]);
 
   const loadPosts = useCallback(async () => {
     try {
