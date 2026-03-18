@@ -351,3 +351,61 @@ export async function searchUsers(queryText) {
     )
     .slice(0, 3);
 }
+
+// ---------- Marketplace ----------
+export async function getFeaturedAds(limitCount = 10) {
+  const now = Timestamp.now();
+  const q = query(
+    collection(db, 'ads'),
+    where('boostExpiresAt', '>', now),
+    orderBy('boostExpiresAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+      boostedAt: data.boostedAt?.toDate?.()?.toISOString?.() ?? data.boostedAt,
+      boostExpiresAt: data.boostExpiresAt?.toDate?.()?.toISOString?.() ?? data.boostExpiresAt,
+    };
+  });
+}
+
+export async function getMarketplaceAds(opts = {}) {
+  const { limitCount = 50, lastDoc, category = null } = opts;
+
+  let q;
+  if (category) {
+    q = query(
+      collection(db, 'ads'),
+      where('category', '==', category),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+  } else {
+    q = query(
+      collection(db, 'ads'),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+  }
+
+  if (lastDoc) q = query(q, startAfter(lastDoc));
+
+  const snap = await getDocs(q);
+  const ads = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+      boostedAt: data.boostedAt?.toDate?.()?.toISOString?.() ?? data.boostedAt,
+      boostExpiresAt: data.boostExpiresAt?.toDate?.()?.toISOString?.() ?? data.boostExpiresAt,
+    };
+  });
+
+  return { ads, lastDoc: snap.docs[snap.docs.length - 1] };
+}

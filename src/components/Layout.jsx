@@ -161,6 +161,7 @@ export default function Layout({ children }) {
 
         <nav className="layout-nav">
           <Link to="/feed" className={isActive('/feed')}>Feed</Link>
+          <Link to="/marketplace" className={isActive('/marketplace')}>Marketplace</Link>
           <Link to="/notes" className={isActive('/notes')}>Notes</Link>
           <Link to="/map" className={isActive('/map')}>Map</Link>
           <Link to="/messages" className={isActive('/messages')}>Messages</Link>
@@ -184,6 +185,9 @@ export default function Layout({ children }) {
           </Link>
           <Link to="/ad/create" className={`sidebar-item ${isActive('/ad/create')}`}>
             <span className="sidebar-dot" />Post Ad
+          </Link>
+          <Link to="/marketplace" className={`sidebar-item ${isActive('/marketplace')}`}>
+            <span className="sidebar-dot" />🛒 Marketplace
           </Link>
           <Link to="/messages" className={`sidebar-item ${isActive('/messages')}`}>
             <span className="sidebar-dot" />Messages

@@ -18,6 +18,7 @@ import Profile from './pages/Profile';
 import ChatList from './pages/ChatList';
 import ChatThread from './pages/ChatThread';
 import CampusMap from './pages/CampusMap';
+import Marketplace from './pages/Marketplace';
 
 function LoadingScreen() {
   return (
@@ -116,6 +117,9 @@ export default function App() {
 
         {/* Campus Map — public, no login required */}
         <Route path="/map" element={<CampusMap />} />
+
+        {/* Marketplace — public, no login required */}
+        <Route path="/marketplace" element={<Marketplace />} />
 
         {/* Notes — public, no login required */}
         <Route path="/notes" element={<Notes />} />
