@@ -169,10 +169,13 @@ export default function CampusMap() {
         .setLngLat([u.lng, u.lat])
         .addTo(mapRef.current);
 
-      el.addEventListener('click', () => {
+      const handleSelect = (e) => {
+        e.stopPropagation();
         setSelected({ ...u, kind: 'university' });
         mapRef.current.flyTo({ center: [u.lng, u.lat], zoom: 15, duration: 1000 });
-      });
+      };
+      el.addEventListener('click', handleSelect);
+      el.addEventListener('touchend', handleSelect);
 
       markersRef.current.push(marker);
     });
@@ -185,10 +188,13 @@ export default function CampusMap() {
         .setLngLat([ad.lng, ad.lat])
         .addTo(mapRef.current);
 
-      el.addEventListener('click', () => {
+      const handleSelect = (e) => {
+        e.stopPropagation();
         setSelected({ ...ad, kind: 'seller' });
         mapRef.current.flyTo({ center: [ad.lng, ad.lat], zoom: 15, duration: 1000 });
-      });
+      };
+      el.addEventListener('click', handleSelect);
+      el.addEventListener('touchend', handleSelect);
 
       markersRef.current.push(marker);
     });
@@ -267,7 +273,7 @@ export default function CampusMap() {
       console.error('Place search error:', err);
     }
 
-    setSearchResults([...placeResults, ...uniResults.slice(0, 2), ...sellerResults.slice(0, 2)]);
+    setSearchResults([...uniResults, ...sellerResults, ...placeResults]);
     setSearching(false);
   }, [sellers]);
 
@@ -284,6 +290,15 @@ export default function CampusMap() {
     if (item.kind === 'place') {
       if (destinationMarkerRef.current) destinationMarkerRef.current.remove();
       const el = createDestinationMarker();
+      
+      // Add click/touch handlers for the destination marker
+      const handleSelect = (e) => {
+        e.stopPropagation();
+        setSelected(item);
+      };
+      el.addEventListener('click', handleSelect);
+      el.addEventListener('touchend', handleSelect);
+      
       destinationMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([item.lng, item.lat])
         .addTo(mapRef.current);

@@ -218,11 +218,13 @@
 /* ========== MARKERS ========== */
 .cmap-marker {
   cursor: pointer;
+  pointer-events: auto !important;
+  z-index: 10;
 }
 
 .cmap-marker-pin {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   display: flex;
@@ -230,15 +232,18 @@
   justify-content: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   transition: transform 0.2s;
+  pointer-events: auto;
 }
 
-.cmap-marker:hover .cmap-marker-pin {
-  transform: rotate(-45deg) scale(1.15);
+.cmap-marker:hover .cmap-marker-pin,
+.cmap-marker:active .cmap-marker-pin {
+  transform: rotate(-45deg) scale(1.2);
 }
 
 .cmap-marker-emoji {
   transform: rotate(45deg);
-  font-size: 14px;
+  font-size: 16px;
+  pointer-events: none;
 }
 
 /* User location marker */
@@ -277,12 +282,15 @@
 /* Destination marker */
 .cmap-dest-marker {
   cursor: pointer;
+  pointer-events: auto !important;
+  z-index: 10;
 }
 
 .cmap-dest-pin {
-  font-size: 32px;
+  font-size: 36px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
   animation: bounce 0.5s ease;
+  pointer-events: auto;
 }
 
 @keyframes bounce {
