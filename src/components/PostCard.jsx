@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getComments, addComment, deletePost } from '../lib/firestore';
@@ -6,17 +6,31 @@ import { getUser } from '../lib/firestore';
 import AdImage from './AdImage';
 import './PostCard.css';
 
-const PLACEHOLDER = 'https://placehold.co/600x400?text=No+media';
+function timeAgo(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d`;
+  return `${Math.floor(seconds / 604800)}w`;
+}
 
 export default function PostCard({ post, isLiked, onLike, onDelete }) {
   const { user } = useAuth();
   const [creator, setCreator] = useState(null);
-  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showFullCaption, setShowFullCaption] = useState(false);
+  const [doubleTapLiked, setDoubleTapLiked] = useState(false);
+  const lastTapRef = useRef(0);
 
   const isOwner = user?.uid === post?.createdBy;
 
@@ -25,9 +39,9 @@ export default function PostCard({ post, isLiked, onLike, onDelete }) {
   }, [post?.createdBy]);
 
   useEffect(() => {
-    if (!commentsOpen || !post?.id) return;
+    if (!showComments || !post?.id) return;
     getComments(post.id).then(setComments);
-  }, [commentsOpen, post?.id]);
+  }, [showComments, post?.id]);
 
   useEffect(() => {
     function handleClick() { setMenuOpen(false); }
@@ -35,7 +49,7 @@ export default function PostCard({ post, isLiked, onLike, onDelete }) {
     return () => document.removeEventListener('click', handleClick);
   }, [menuOpen]);
 
-  async function handleDelete() {
+  const handleDelete = useCallback(async () => {
     if (!window.confirm('Delete this post?')) return;
     setDeleting(true);
     try {
@@ -45,9 +59,9 @@ export default function PostCard({ post, isLiked, onLike, onDelete }) {
       console.error(err);
       setDeleting(false);
     }
-  }
+  }, [post?.id, onDelete]);
 
-  async function handleAddComment(e) {
+  const handleAddComment = useCallback(async (e) => {
     e.preventDefault();
     if (!commentText.trim() || !user || !post?.id) return;
     setCommentLoading(true);
@@ -66,97 +80,202 @@ export default function PostCard({ post, isLiked, onLike, onDelete }) {
     } finally {
       setCommentLoading(false);
     }
-  }
+  }, [commentText, user, post?.id]);
+
+  // Double tap to like
+  const handleDoubleTap = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      if (!isLiked) {
+        onLike?.();
+        setDoubleTapLiked(true);
+        setTimeout(() => setDoubleTapLiked(false), 1000);
+      }
+    }
+    lastTapRef.current = now;
+  };
 
   const mediaUrls = Array.isArray(post?.mediaUrls) ? post.mediaUrls : [];
   const firstUrl = mediaUrls[0];
   const isVideo = post?.type === 'video' || (firstUrl && /\.(mp4|webm|ogg)$/i.test(firstUrl));
-  const creatorName = creator?.displayName || 'User';
-  const creatorPhoto = creator?.photoURL || `https://ui-avatars.com/api?name=${encodeURIComponent(creatorName)}`;
+  const creatorName = creator?.displayName || creator?.email?.split('@')[0] || 'User';
+  const creatorInitial = creatorName[0]?.toUpperCase() || 'U';
+  const creatorPhoto = creator?.photoURL;
+  const likeCount = post.likeCount ?? 0;
+  const commentCount = post.commentCount ?? 0;
+  const caption = post.caption || '';
+  const shouldTruncate = caption.length > 100;
 
   if (deleting) return null;
 
   return (
-    <article className="post-card">
-      <header className="post-card-header">
-        <Link to={`/profile/${post.createdBy}`} className="post-card-user">
-          <img src={creatorPhoto} alt="" className="post-card-avatar" />
-          <span className="post-card-name">{creatorName}</span>
+    <article className="ig-post">
+      {/* Header */}
+      <header className="ig-post-header">
+        <Link to={`/profile/${post.createdBy}`} className="ig-post-user">
+          {creatorPhoto ? (
+            <img src={creatorPhoto} alt="" className="ig-post-avatar" />
+          ) : (
+            <div className="ig-post-avatar ig-post-avatar-fallback">{creatorInitial}</div>
+          )}
+          <div className="ig-post-user-info">
+            <span className="ig-post-username">{creatorName}</span>
+            <span className="ig-post-time">{timeAgo(post.createdAt)}</span>
+          </div>
         </Link>
-        {isOwner && (
-          <div className="post-card-menu-wrap" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="post-card-menu-btn"
-              onClick={() => setMenuOpen((o) => !o)}
-              aria-label="Post options"
-            >
-              •••
-            </button>
-            {menuOpen && (
-              <div className="post-card-menu">
-                <button
-                  type="button"
-                  className="post-card-menu-item delete"
-                  onClick={handleDelete}
-                >
-                  🗑️ Delete post
-                </button>
-              </div>
+        <button
+          type="button"
+          className="ig-post-menu-btn"
+          onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          aria-label="More options"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="6" r="1.5"/>
+            <circle cx="12" cy="12" r="1.5"/>
+            <circle cx="12" cy="18" r="1.5"/>
+          </svg>
+        </button>
+        {menuOpen && (
+          <div className="ig-post-menu" onClick={(e) => e.stopPropagation()}>
+            {isOwner && (
+              <button type="button" className="ig-menu-item danger" onClick={handleDelete}>
+                Delete
+              </button>
             )}
+            <button type="button" className="ig-menu-item" onClick={() => setMenuOpen(false)}>
+              Cancel
+            </button>
           </div>
         )}
       </header>
-      <div className="post-card-media">
+
+      {/* Media */}
+      <div className="ig-post-media" onClick={handleDoubleTap}>
         {firstUrl ? (
           isVideo ? (
-            <video src={firstUrl} controls className="post-card-video" />
+            <video src={firstUrl} controls className="ig-post-video" playsInline />
           ) : (
-            <AdImage src={firstUrl} alt={post.caption || 'Post'} className="post-card-img" />
+            <AdImage src={firstUrl} alt={caption || 'Post'} className="ig-post-img" />
           )
         ) : (
-          <img src={PLACEHOLDER} alt="No media" className="post-card-img" />
+          <div className="ig-post-no-media">
+            <span>📷</span>
+          </div>
+        )}
+        {doubleTapLiked && (
+          <div className="ig-post-heart-animation">
+            <svg viewBox="0 0 24 24" fill="white">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </div>
         )}
       </div>
-      <div className="post-card-body">
-        {post.caption && <p className="post-card-caption">{post.caption}</p>}
-        <div className="post-card-actions">
+
+      {/* Actions */}
+      <div className="ig-post-actions">
+        <div className="ig-post-actions-left">
           <button
             type="button"
-            className={`post-card-like ${isLiked ? 'is-liked' : ''}`}
+            className={`ig-action-btn ${isLiked ? 'liked' : ''}`}
             onClick={() => onLike?.()}
             aria-label={isLiked ? 'Unlike' : 'Like'}
           >
-            ♥ {post.likeCount ?? 0}
+            {isLiked ? (
+              <svg viewBox="0 0 24 24" fill="#ed4956">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            )}
           </button>
           <button
             type="button"
-            className="post-card-comment-btn"
-            onClick={() => setCommentsOpen((o) => !o)}
+            className="ig-action-btn"
+            onClick={() => setShowComments(!showComments)}
+            aria-label="Comment"
           >
-            💬 {post.commentCount ?? 0}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+          </button>
+          <button type="button" className="ig-action-btn" aria-label="Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
           </button>
         </div>
+        <button type="button" className="ig-action-btn" aria-label="Save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
       </div>
-      {commentsOpen && (
-        <div className="post-card-comments">
-          <ul className="post-card-comment-list">
-            {comments.map((c) => (
-              <li key={c.id} className="post-card-comment">
-                <Link to={`/profile/${c.userId}`} className="post-card-comment-name">{c.userName}</Link>
-                <span className="post-card-comment-text">{c.text}</span>
-              </li>
-            ))}
-          </ul>
+
+      {/* Likes */}
+      {likeCount > 0 && (
+        <div className="ig-post-likes">
+          <span>{likeCount.toLocaleString()} {likeCount === 1 ? 'like' : 'likes'}</span>
+        </div>
+      )}
+
+      {/* Caption */}
+      {caption && (
+        <div className="ig-post-caption">
+          <Link to={`/profile/${post.createdBy}`} className="ig-caption-username">
+            {creatorName}
+          </Link>
+          <span className="ig-caption-text">
+            {shouldTruncate && !showFullCaption ? (
+              <>
+                {caption.slice(0, 100)}...
+                <button className="ig-more-btn" onClick={() => setShowFullCaption(true)}>more</button>
+              </>
+            ) : (
+              caption
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* View Comments */}
+      {commentCount > 0 && !showComments && (
+        <button className="ig-view-comments" onClick={() => setShowComments(true)}>
+          View all {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
+        </button>
+      )}
+
+      {/* Comments Section */}
+      {showComments && (
+        <div className="ig-comments">
+          {comments.length === 0 ? (
+            <p className="ig-no-comments">No comments yet</p>
+          ) : (
+            <ul className="ig-comment-list">
+              {comments.map((c) => (
+                <li key={c.id} className="ig-comment">
+                  <Link to={`/profile/${c.userId}`} className="ig-comment-username">
+                    {c.userName}
+                  </Link>
+                  <span className="ig-comment-text">{c.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           {user && (
-            <form onSubmit={handleAddComment} className="post-card-comment-form">
+            <form onSubmit={handleAddComment} className="ig-comment-form">
               <input
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Write a comment…"
+                placeholder="Add a comment..."
                 disabled={commentLoading}
               />
-              <button type="submit" className="btn btn-primary" disabled={commentLoading || !commentText.trim()}>
+              <button
+                type="submit"
+                disabled={commentLoading || !commentText.trim()}
+              >
                 Post
               </button>
             </form>
