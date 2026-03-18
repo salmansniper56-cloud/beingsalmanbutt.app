@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getAds, getPosts, toggleLike, isLiked, togglePostLike, isPostLiked, getUser, searchUsers, toggleFollow, isFollowing } from '../lib/firestore';
+import { getAds, getPosts, toggleLike, isLiked, togglePostLike, isPostLiked } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import AdCard from '../components/AdCard';
 import PostCard from '../components/PostCard';
@@ -32,9 +32,6 @@ export default function Feed() {
   const [postLiked, setPostLiked] = useState({});
   const [category, setCategory] = useState('');
   const [createPostOpen, setCreatePostOpen] = useState(false);
-  const [suggestedUsers, setSuggestedUsers] = useState([]);
-  const [userProfile, setUserProfile] = useState(null);
-  const [followingStates, setFollowingStates] = useState({});
 
   const loadAds = useCallback(async () => {
     try {
@@ -70,50 +67,6 @@ export default function Feed() {
     (feedMode === 'ads' ? loadAds() : loadPosts()).finally(() => setLoading(false));
   }, [feedMode, loadAds, loadPosts]);
 
-  useEffect(() => {
-    if (user?.uid) {
-      loadUserProfile();
-      loadSuggestedUsers();
-    }
-  }, [user?.uid]);
-
-  async function loadUserProfile() {
-    try {
-      const profile = await getUser(user.uid);
-      setUserProfile(profile);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  async function loadSuggestedUsers() {
-    try {
-      const users = await searchUsers('');
-      const filtered = users.filter(u => u.id !== user.uid).slice(0, 5);
-      setSuggestedUsers(filtered);
-
-      // Load following states
-      const states = {};
-      await Promise.all(
-        filtered.map(async (u) => {
-          states[u.id] = await isFollowing(u.id, user.uid);
-        })
-      );
-      setFollowingStates(states);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  async function handleFollowUser(userId) {
-    try {
-      await toggleFollow(userId, user.uid);
-      setFollowingStates(prev => ({ ...prev, [userId]: !prev[userId] }));
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
   async function handleLike(adId) {
     if (!user?.uid) return;
     await toggleLike(adId, user.uid);
@@ -133,132 +86,61 @@ export default function Feed() {
   }
 
   return (
-    <div className="feed-instagram-layout">
-      {/* Main Content */}
-      <div className="feed-main">
-        <StoriesList />
+    <div className="feed">
+      <StoriesList />
 
-        <div className="feed-tabs-bar">
-          <button type="button" className={`feed-tab ${feedMode === 'posts' ? 'active' : ''}`} onClick={() => setFeedMode('posts')}>
-            Posts
-          </button>
-          <button type="button" className={`feed-tab ${feedMode === 'ads' ? 'active' : ''}`} onClick={() => setFeedMode('ads')}>
-            Marketplace
-          </button>
-          {feedMode === 'ads' && (
-            <select className="feed-category-select" value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All categories</option>
-              <option value="books">Books</option>
-              <option value="electronics">Electronics</option>
-              <option value="other">Other</option>
-            </select>
-          )}
-        </div>
+      <div className="feed-tabs-bar">
+        <button type="button" className={`feed-tab ${feedMode === 'posts' ? 'active' : ''}`} onClick={() => setFeedMode('posts')}>
+          Posts
+        </button>
+        <button type="button" className={`feed-tab ${feedMode === 'ads' ? 'active' : ''}`} onClick={() => setFeedMode('ads')}>
+          Marketplace
+        </button>
+        {feedMode === 'ads' && (
+          <select className="feed-category-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">All categories</option>
+            <option value="books">Books</option>
+            <option value="electronics">Electronics</option>
+            <option value="other">Other</option>
+          </select>
+        )}
+      </div>
 
-        {loading ? (
-          <div className="empty-state"><div className="spinner" /></div>
-        ) : feedMode === 'posts' ? (
-          posts.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">📷</div>
-              <p>No posts yet. Share something!</p>
-              <button type="button" className="btn btn-primary" onClick={() => setCreatePostOpen(true)}>Create post</button>
-            </div>
-          ) : (
-            <div className="feed-posts">
-              {posts.map(post => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  isLiked={!!postLiked[post.id]}
-                  onLike={() => handlePostLike(post.id)}
-                  onDelete={handlePostDelete}
-                />
-              ))}
-            </div>
-          )
-        ) : ads.length === 0 ? (
+      {loading ? (
+        <div className="empty-state"><div className="spinner" /></div>
+      ) : feedMode === 'posts' ? (
+        posts.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">🏷️</div>
-            <p>No listings yet. Be the first!</p>
-            <Link to="/ad/create" className="btn btn-primary">Create listing</Link>
+            <div className="empty-state-icon">📷</div>
+            <p>No posts yet. Share something!</p>
+            <button type="button" className="btn btn-primary" onClick={() => setCreatePostOpen(true)}>Create post</button>
           </div>
         ) : (
-          <div className="feed-grid">
-            {ads.map(ad => (
-              <AdCard key={ad.id} ad={ad} likeCount={ad.likeCount} isLiked={!!liked[ad.id]} onLike={() => handleLike(ad.id)} showSeller />
+          <div className="feed-posts">
+            {posts.map(post => (
+              <PostCard
+                key={post.id}
+                post={post}
+                isLiked={!!postLiked[post.id]}
+                onLike={() => handlePostLike(post.id)}
+                onDelete={handlePostDelete}
+              />
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Right Sidebar */}
-      <div className="feed-sidebar">
-        {/* Current User */}
-        {userProfile && (
-          <div className="feed-sidebar-user">
-            <Link to={`/profile/${user?.uid}`} className="sidebar-user-link">
-              <img
-                src={userProfile.photoURL || `https://ui-avatars.com/api?name=${encodeURIComponent(userProfile.displayName || 'User')}`}
-                alt={userProfile.displayName}
-                className="sidebar-user-avatar"
-              />
-              <div className="sidebar-user-info">
-                <div className="sidebar-user-username">{userProfile.email?.split('@')[0] || 'user'}</div>
-                <div className="sidebar-user-name">{userProfile.displayName || 'User'}</div>
-              </div>
-            </Link>
-            <Link to="/settings" className="sidebar-switch-btn">Switch</Link>
-          </div>
-        )}
-
-        {/* Suggestions */}
-        {suggestedUsers.length > 0 && (
-          <div className="feed-suggestions">
-            <div className="suggestions-header">
-              <h3>Suggestions For You</h3>
-              <Link to="/explore">See All</Link>
-            </div>
-
-            <div className="suggestions-list">
-              {suggestedUsers.map(suggestedUser => {
-                const userName = suggestedUser.displayName || suggestedUser.email?.split('@')[0] || 'User';
-                const userPhoto = suggestedUser.photoURL || `https://ui-avatars.com/api?name=${encodeURIComponent(userName)}`;
-
-                return (
-                  <div key={suggestedUser.id} className="suggestion-item">
-                    <Link to={`/profile/${suggestedUser.id}`} className="suggestion-user-link">
-                      <img src={userPhoto} alt={userName} className="suggestion-avatar" />
-                      <div className="suggestion-info">
-                        <div className="suggestion-username">{suggestedUser.email?.split('@')[0] || 'user'}</div>
-                        <div className="suggestion-subtitle">Suggested for you</div>
-                      </div>
-                    </Link>
-                    <button
-                      className="suggestion-follow-btn"
-                      onClick={() => handleFollowUser(suggestedUser.id)}
-                    >
-                      {followingStates[suggestedUser.id] ? 'Following' : 'Follow'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="feed-sidebar-footer">
-          <div className="footer-links">
-            <a href="#">About</a> · <a href="#">Help</a> · <a href="#">Press</a> · <a href="#">API</a> ·
-            <a href="#">Jobs</a> · <a href="#">Privacy</a> · <a href="#">Terms</a> ·
-            <a href="#">Locations</a> · <a href="#">Language</a>
-          </div>
-          <div className="footer-copyright">
-            © 2026 CAMPUSKART FROM SALMAN
-          </div>
+        )
+      ) : ads.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🏷️</div>
+          <p>No listings yet. Be the first!</p>
+          <Link to="/ad/create" className="btn btn-primary">Create listing</Link>
         </div>
-      </div>
+      ) : (
+        <div className="feed-grid">
+          {ads.map(ad => (
+            <AdCard key={ad.id} ad={ad} likeCount={ad.likeCount} isLiked={!!liked[ad.id]} onLike={() => handleLike(ad.id)} showSeller />
+          ))}
+        </div>
+      )}
 
       {createPostOpen && (
         <CreatePostModal
