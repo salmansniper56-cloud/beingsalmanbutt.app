@@ -162,6 +162,7 @@ export default function Layout({ children }) {
         <nav className="layout-nav">
           <Link to="/feed" className={isActive('/feed')}>Feed</Link>
           <Link to="/notes" className={isActive('/notes')}>Notes</Link>
+          <Link to="/map" className={isActive('/map')}>Map</Link>
           <Link to="/messages" className={isActive('/messages')}>Messages</Link>
           <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === 'dark' ? '☀️' : '🌙'}
@@ -193,6 +194,9 @@ export default function Layout({ children }) {
           </Link>
           <Link to="/notes" className={`sidebar-item ${isActive('/notes')}`}>
             <span className="sidebar-dot" />📚 Notes
+          </Link>
+          <Link to="/map" className={`sidebar-item ${isActive('/map')}`}>
+            <span className="sidebar-dot" />🗺️ Campus Map
           </Link>
           <hr className="sidebar-divider" />
           <div className="sidebar-section-label">Categories</div>
