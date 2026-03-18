@@ -39,6 +39,24 @@ const MAP_STYLES = {
   standard: 'mapbox://styles/mapbox/standard',
 };
 
+// Helper to get icon based on POI category
+const getCategoryIcon = (category) => {
+  const cat = (category || '').toLowerCase();
+  if (cat.includes('restaurant') || cat.includes('food') || cat.includes('cafe') || cat.includes('coffee')) return '🍽️';
+  if (cat.includes('hospital') || cat.includes('clinic') || cat.includes('medical') || cat.includes('pharmacy')) return '🏥';
+  if (cat.includes('hotel') || cat.includes('lodging')) return '🏨';
+  if (cat.includes('school') || cat.includes('college') || cat.includes('university') || cat.includes('education')) return '🎓';
+  if (cat.includes('bank') || cat.includes('atm')) return '🏦';
+  if (cat.includes('shop') || cat.includes('store') || cat.includes('mall') || cat.includes('market')) return '🛒';
+  if (cat.includes('gas') || cat.includes('fuel') || cat.includes('petrol')) return '⛽';
+  if (cat.includes('mosque') || cat.includes('religious')) return '🕌';
+  if (cat.includes('park') || cat.includes('garden')) return '🌳';
+  if (cat.includes('gym') || cat.includes('fitness') || cat.includes('sport')) return '🏋️';
+  if (cat.includes('airport') || cat.includes('bus') || cat.includes('transit') || cat.includes('station')) return '🚏';
+  if (cat.includes('place') || cat.includes('city') || cat.includes('locality')) return '🏙️';
+  return '📍';
+};
+
 export default function CampusMap() {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -118,6 +136,51 @@ export default function CampusMap() {
     map.on('load', () => {
       setMapLoaded(true);
       mapRef.current = map;
+      
+      // Make POI labels clickable
+      map.on('click', (e) => {
+        // Query for POI features at click point
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ['poi-label', 'transit-label', 'airport-label', 'settlement-label', 'settlement-subdivision-label']
+        });
+        
+        if (features.length > 0) {
+          const feature = features[0];
+          const name = feature.properties.name || feature.properties.name_en || 'Unknown Place';
+          const category = feature.properties.category || feature.properties.class || feature.properties.type || '';
+          const coords = feature.geometry.coordinates || [e.lngLat.lng, e.lngLat.lat];
+          const icon = getCategoryIcon(category);
+          
+          const poi = {
+            name: name,
+            fullName: `${name}${category ? ' • ' + category : ''}`,
+            lat: coords[1] || e.lngLat.lat,
+            lng: coords[0] || e.lngLat.lng,
+            kind: 'place',
+            category: category,
+            icon: icon
+          };
+          
+          setSelected(poi);
+          
+          // Add destination marker
+          if (destinationMarkerRef.current) destinationMarkerRef.current.remove();
+          const el = document.createElement('div');
+          el.className = 'cmap-dest-marker';
+          el.innerHTML = `<div class="cmap-dest-pin">${icon}</div>`;
+          destinationMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([poi.lng, poi.lat])
+            .addTo(map);
+        }
+      });
+      
+      // Change cursor on POI hover
+      map.on('mouseenter', 'poi-label', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', 'poi-label', () => {
+        map.getCanvas().style.cursor = '';
+      });
     });
 
     return () => {
@@ -253,12 +316,14 @@ export default function CampusMap() {
       .filter((s) => s.title?.toLowerCase().includes(query.toLowerCase()))
       .map((s) => ({ ...s, kind: 'seller', icon: '🛍️', name: s.title }));
 
-    // Search places via Mapbox
+    // Search places via Mapbox - increased limit and added proximity for better results
     let placeResults = [];
     try {
       const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+      const center = mapRef.current?.getCenter();
+      const proximityParam = center ? `&proximity=${center.lng},${center.lat}` : '';
       const res = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=pk&limit=5`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=pk&limit=10${proximityParam}&types=poi,address,place,locality,neighborhood`
       );
       const data = await res.json();
       placeResults = (data.features || []).map((f) => ({
@@ -267,7 +332,8 @@ export default function CampusMap() {
         lat: f.center[1],
         lng: f.center[0],
         kind: 'place',
-        icon: '📍',
+        category: f.properties?.category || f.place_type?.[0] || '',
+        icon: getCategoryIcon(f.properties?.category || f.place_type?.[0] || ''),
       }));
     } catch (err) {
       console.error('Place search error:', err);
