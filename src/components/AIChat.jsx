@@ -27,8 +27,6 @@ export default function AIChat() {
   const msgsEndRef = useRef(null);
   const inputRef   = useRef(null);
 
-  const apiKey = import.meta.env.VITE_NVIDIA_API_KEY;
-
   useEffect(() => {
     if (open) {
       msgsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,15 +42,6 @@ export default function AIChat() {
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || loading) return;
-
-    if (!apiKey) {
-      setMessages(prev => [...prev,
-        { role: "user", content: text },
-        { role: "assistant", content: "AI chat is not configured yet. Please add VITE_NVIDIA_API_KEY to your environment variables." },
-      ]);
-      setInput("");
-      return;
-    }
 
     const userMsg     = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
