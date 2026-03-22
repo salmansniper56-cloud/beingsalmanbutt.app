@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import ProfileGuard from './components/ProfileGuard';
-import AIChat from './components/AIChat';
 import Notes from './pages/Notes';
 import AdminUploadNotes from './pages/AdminUploadNotes';
 import Meetings from './pages/Meetings';
@@ -20,6 +19,7 @@ import ChatList from './pages/ChatList';
 import ChatThread from './pages/ChatThread';
 import CampusMap from './pages/CampusMap';
 import Marketplace from './pages/Marketplace';
+import CampusAI from './pages/CampusAI';
 
 function LoadingScreen() {
   return (
@@ -129,6 +129,9 @@ export default function App() {
         {/* Campus Map — public, no login required */}
         <Route path="/map" element={<CampusMap />} />
 
+        {/* CampusKart AI — public */}
+        <Route path="/ai" element={<CampusAI />} />
+
         {/* Marketplace — public, no login required */}
         <Route path="/marketplace" element={<Marketplace />} />
 
@@ -147,8 +150,6 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-
-      <AIChat />
     </>
   );
 }
