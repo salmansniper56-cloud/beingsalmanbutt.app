@@ -3,6 +3,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp } from 'firebase-admin/app';
 import Stripe from 'stripe';
+import OpenAI from 'openai';
 
 initializeApp();
 
@@ -20,6 +21,69 @@ function getBoostOptions() {
 function isValidPriceId(id) {
   return typeof id === 'string' && id.startsWith('price_') && id.length > 10;
 }
+
+const ALLOWED_AI_MODELS = new Set([
+  'deepseek-ai/deepseek-v3.1',
+  'meta/llama-3.1-70b-instruct',
+]);
+
+function sanitizeMessages(messages = []) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .map((m) => ({ role: m.role, content: m.content.trim().slice(0, 4000) }))
+    .filter((m) => m.content.length > 0)
+    .slice(-16);
+}
+
+export const askCampusAI = onCall(
+  { region: 'us-central1', secrets: ['NVIDIA_API_KEY'] },
+  async (request) => {
+    const input = (request.data && typeof request.data === 'object') ? request.data : {};
+    const model = ALLOWED_AI_MODELS.has(input.model) ? input.model : 'deepseek-ai/deepseek-v3.1';
+    const messages = sanitizeMessages(input.messages);
+
+    if (!messages.length) {
+      throw new HttpsError('invalid-argument', 'At least one valid message is required.');
+    }
+
+    const apiKey = process.env.NVIDIA_API_KEY || '';
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', 'NVIDIA_API_KEY is not configured in Firebase Functions secrets.');
+    }
+
+    const client = new OpenAI({
+      baseURL: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1',
+      apiKey,
+    });
+
+    try {
+      const completion = await client.chat.completions.create({
+        model,
+        temperature: 0.2,
+        top_p: 0.7,
+        max_tokens: 1024,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are CampusKart AI, a concise and friendly study assistant for Pakistani university students. Keep answers practical and clear.',
+          },
+          ...messages,
+        ],
+      });
+
+      const reply = completion.choices?.[0]?.message?.content?.trim();
+      if (!reply) {
+        throw new Error('No response received from NVIDIA model.');
+      }
+
+      return { reply, model };
+    } catch (err) {
+      console.error('askCampusAI error:', err?.message || err);
+      throw new HttpsError('internal', err?.message || 'AI request failed');
+    }
+  }
+);
 
 export const createBoostCheckout = onCall({ region: 'us-central1' }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Must be logged in');

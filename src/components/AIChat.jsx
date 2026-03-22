@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import "./AIChat.css";
 
 const MODELS = [
-  { value: "claude-haiku-4-5-20251001", label: "Claude Haiku", badge: "Fast",  color: "haiku" },
-  { value: "claude-sonnet-4-6",         label: "Claude Sonnet", badge: "Smart", color: "sonnet" },
+  { value: "deepseek-ai/deepseek-v3.1", label: "DeepSeek V3.1", badge: "Smart", color: "sonnet" },
+  { value: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B", badge: "Fast", color: "haiku" },
 ];
 
 const SYSTEM_PROMPT = `You are CampusKart AI — a friendly, knowledgeable study assistant for Pakistani university students.
@@ -16,9 +16,9 @@ Keep answers clear, concise, and student-friendly. Use simple English.`;
 
 export default function AIChat() {
   const [open, setOpen]         = useState(false);
-  const [model, setModel]       = useState("claude-haiku-4-5-20251001");
+  const [model, setModel]       = useState("deepseek-ai/deepseek-v3.1");
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi! I'm your campus study assistant powered by Claude AI. Ask me anything — concepts, exam prep, book recommendations, or how to use CampusKart." },
+    { role: "assistant", content: "Hi! I'm your campus study assistant powered by DeepSeek AI. Ask me anything — concepts, exam prep, book recommendations, or how to use CampusKart." },
   ]);
   const [input, setInput]   = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,7 @@ export default function AIChat() {
   const msgsEndRef = useRef(null);
   const inputRef   = useRef(null);
 
-  const apiKey = import.meta.env.VITE_CLAUDE_API_KEY;
+  const apiKey = import.meta.env.VITE_NVIDIA_API_KEY;
 
   useEffect(() => {
     if (open) {
@@ -47,7 +47,7 @@ export default function AIChat() {
     if (!apiKey) {
       setMessages(prev => [...prev,
         { role: "user", content: text },
-        { role: "assistant", content: "AI chat is not configured yet. Please add VITE_CLAUDE_API_KEY to your environment variables." },
+        { role: "assistant", content: "AI chat is not configured yet. Please add VITE_NVIDIA_API_KEY to your environment variables." },
       ]);
       setInput("");
       return;
@@ -60,22 +60,26 @@ export default function AIChat() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Content-Type":      "application/json",
-          "x-api-key":         apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model,
-          max_tokens: 1024,
-          system: SYSTEM_PROMPT,
-          messages: newMessages.map(m => ({
-            role:    m.role === "assistant" ? "assistant" : "user",
-            content: m.content,
-          })),
+          temperature: 0.2,
+          top_p: 0.7,
+          max_tokens: 8192,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...newMessages.map(m => ({
+              role: m.role === "assistant" ? "assistant" : "user",
+              content: m.content,
+            })),
+          ],
+          extra_body: { chat_template_kwargs: { thinking: true } },
+          stream: false,
         }),
       });
 
@@ -85,10 +89,10 @@ export default function AIChat() {
       }
 
       const data  = await res.json();
-      const reply = data.content?.[0]?.text || "Sorry, I couldn't get a response.";
+      const reply = data.choices?.[0]?.message?.content || "Sorry, I couldn't get a response.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
-      console.error("Claude API error:", err);
+      console.error("NVIDIA API error:", err);
       setMessages(prev => [...prev, {
         role: "assistant",
         content: "Sorry, something went wrong. Please try again.",
@@ -124,7 +128,7 @@ export default function AIChat() {
             </div>
             <div style={{ flex: 1 }}>
               <div className="aichat-header-title">CampusKart AI</div>
-              <div className="aichat-header-sub">Powered by Claude · always here</div>
+              <div className="aichat-header-sub">Powered by DeepSeek · always here</div>
             </div>
             <button className="aichat-icon-btn" onClick={clearChat} title="Clear chat">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -200,7 +204,7 @@ export default function AIChat() {
               </svg>
             </button>
           </div>
-          <div className="aichat-powered">Powered by Anthropic Claude</div>
+          <div className="aichat-powered">Powered by NVIDIA DeepSeek AI</div>
         </div>
       )}
 
