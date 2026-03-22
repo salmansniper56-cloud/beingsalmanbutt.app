@@ -110,7 +110,7 @@ export default function App() {
           path="/messages/:chatId"
           element={
             <ProtectedRoute>
-              <ChatThread />
+              <ChatList />
             </ProtectedRoute>
           }
         />

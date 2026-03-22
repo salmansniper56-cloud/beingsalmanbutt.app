@@ -161,6 +161,7 @@ export async function getOrCreateChat(uid1, uid2) {
   if (snap.exists()) return id;
   await setDoc(ref, {
     participants: [uid1, uid2],
+    type: 'direct',
     lastMessage: null,
     lastMessageAt: serverTimestamp(),
     createdAt: serverTimestamp(),
@@ -168,11 +169,21 @@ export async function getOrCreateChat(uid1, uid2) {
   return id;
 }
 
-export async function sendMessage(chatId, senderId, text) {
+export async function sendMessage(chatId, senderId, text, mediaUrl = null, mediaType = null) {
   const messagesRef = collection(db, 'chats', chatId, 'messages');
   const chatRef = doc(db, 'chats', chatId);
-  await addDoc(messagesRef, { senderId, text, createdAt: serverTimestamp() });
-  await updateDoc(chatRef, { lastMessage: text, lastMessageAt: serverTimestamp() });
+  const messageData = { 
+    senderId, 
+    text: text || '', 
+    createdAt: serverTimestamp(),
+  };
+  if (mediaUrl) {
+    messageData.mediaUrl = mediaUrl;
+    messageData.mediaType = mediaType || 'image';
+  }
+  await addDoc(messagesRef, messageData);
+  const preview = mediaUrl ? '📷 Photo' : text;
+  await updateDoc(chatRef, { lastMessage: preview, lastMessageAt: serverTimestamp() });
 }
 
 export function subscribeMessages(chatId, callback) {
@@ -202,6 +213,167 @@ export async function getChat(chatId) {
   const ref = doc(db, 'chats', chatId);
   const snap = await getDoc(ref);
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+// ---------- Group Chats ----------
+export async function createGroupChat(creatorId, name, memberIds, photoURL = null) {
+  const ref = collection(db, 'chats');
+  const docRef = await addDoc(ref, {
+    type: 'group',
+    name,
+    photoURL,
+    participants: [creatorId, ...memberIds],
+    admins: [creatorId],
+    createdBy: creatorId,
+    lastMessage: null,
+    lastMessageAt: serverTimestamp(),
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function updateGroupChat(chatId, data) {
+  const ref = doc(db, 'chats', chatId);
+  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function addGroupMember(chatId, userId) {
+  const ref = doc(db, 'chats', chatId);
+  const snap = await getDoc(ref);
+  const participants = snap.data()?.participants || [];
+  if (!participants.includes(userId)) {
+    await updateDoc(ref, { participants: [...participants, userId] });
+  }
+}
+
+export async function removeGroupMember(chatId, userId) {
+  const ref = doc(db, 'chats', chatId);
+  const snap = await getDoc(ref);
+  const participants = snap.data()?.participants || [];
+  await updateDoc(ref, { participants: participants.filter(p => p !== userId) });
+}
+
+export async function getGroupChats(uid) {
+  const q = query(
+    collection(db, 'chats'),
+    where('participants', 'array-contains', uid),
+    where('type', '==', 'group'),
+    limit(50)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// ---------- Communities ----------
+export async function createCommunity(creatorId, name, description, photoURL = null) {
+  const ref = collection(db, 'communities');
+  const docRef = await addDoc(ref, {
+    name,
+    description,
+    photoURL,
+    createdBy: creatorId,
+    admins: [creatorId],
+    memberCount: 1,
+    createdAt: serverTimestamp(),
+  });
+  // Add creator as member
+  await setDoc(doc(db, 'communities', docRef.id, 'members', creatorId), {
+    joinedAt: serverTimestamp(),
+    role: 'admin',
+  });
+  return docRef.id;
+}
+
+export async function getCommunities(limitCount = 50) {
+  const q = query(
+    collection(db, 'communities'),
+    orderBy('memberCount', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function getUserCommunities(uid) {
+  const q = query(collection(db, 'communities'));
+  const snap = await getDocs(q);
+  const communities = [];
+  for (const d of snap.docs) {
+    const memberRef = doc(db, 'communities', d.id, 'members', uid);
+    const memberSnap = await getDoc(memberRef);
+    if (memberSnap.exists()) {
+      communities.push({ id: d.id, ...d.data() });
+    }
+  }
+  return communities;
+}
+
+export async function joinCommunity(communityId, userId) {
+  const memberRef = doc(db, 'communities', communityId, 'members', userId);
+  const communityRef = doc(db, 'communities', communityId);
+  const snap = await getDoc(memberRef);
+  if (!snap.exists()) {
+    await setDoc(memberRef, { joinedAt: serverTimestamp(), role: 'member' });
+    const communitySnap = await getDoc(communityRef);
+    const count = communitySnap.data()?.memberCount || 0;
+    await updateDoc(communityRef, { memberCount: count + 1 });
+  }
+}
+
+export async function leaveCommunity(communityId, userId) {
+  const memberRef = doc(db, 'communities', communityId, 'members', userId);
+  const communityRef = doc(db, 'communities', communityId);
+  const snap = await getDoc(memberRef);
+  if (snap.exists()) {
+    await deleteDoc(memberRef);
+    const communitySnap = await getDoc(communityRef);
+    const count = communitySnap.data()?.memberCount || 0;
+    await updateDoc(communityRef, { memberCount: Math.max(0, count - 1) });
+  }
+}
+
+export async function getCommunityChats(communityId) {
+  const q = query(
+    collection(db, 'communities', communityId, 'chats'),
+    orderBy('createdAt', 'desc'),
+    limit(20)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function createCommunityChat(communityId, creatorId, name) {
+  const ref = collection(db, 'communities', communityId, 'chats');
+  const docRef = await addDoc(ref, {
+    name,
+    createdBy: creatorId,
+    lastMessage: null,
+    lastMessageAt: serverTimestamp(),
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+// ---------- Mark as Read ----------
+export async function markChatAsRead(chatId, userId) {
+  const ref = doc(db, 'chats', chatId, 'readBy', userId);
+  await setDoc(ref, { readAt: serverTimestamp() });
+}
+
+export async function getUnreadCount(chatId, userId) {
+  const readRef = doc(db, 'chats', chatId, 'readBy', userId);
+  const readSnap = await getDoc(readRef);
+  const lastRead = readSnap.data()?.readAt;
+  
+  let q = query(
+    collection(db, 'chats', chatId, 'messages'),
+    where('senderId', '!=', userId)
+  );
+  if (lastRead) {
+    q = query(q, where('createdAt', '>', lastRead));
+  }
+  const snap = await getDocs(q);
+  return snap.size;
 }
 
 // ---------- User ads ----------
