@@ -13,6 +13,7 @@ import {
   searchUsers,
 } from '../lib/firestore';
 import { uploadChatMedia } from '../lib/storage';
+import VideoCall from '../components/VideoCall';
 import './ChatList.css';
 
 export default function ChatList() {
@@ -147,36 +148,14 @@ export default function ChatList() {
     if (!chatId || !peer) return;
     
     // Generate unique room name based on chat ID
-    const roomName = `campuskart-${chatId.replace(/[^a-zA-Z0-9]/g, '')}`;
-    const peerDisplayName = peer?.displayName || 'User';
-    const myDisplayName = user?.displayName || 'Me';
+    const roomName = `campuskart-${chatId.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
     
-    // Jitsi Meet configuration
-    const jitsiConfig = {
+    setInCall({ 
+      type, 
+      peer, 
       roomName,
-      width: '100%',
-      height: '100%',
-      parentNode: null,
-      configOverwrite: {
-        startWithAudioMuted: type === 'video' ? false : false,
-        startWithVideoMuted: type === 'voice',
-        prejoinPageEnabled: false,
-        disableDeepLinking: true,
-      },
-      interfaceConfigOverwrite: {
-        TOOLBAR_BUTTONS: [
-          'microphone', 'camera', 'closedcaptions', 'desktop', 
-          'fullscreen', 'hangup', 'chat', 'settings', 'videoquality',
-        ],
-        SHOW_JITSI_WATERMARK: false,
-        SHOW_BRAND_WATERMARK: false,
-      },
-      userInfo: {
-        displayName: myDisplayName,
-      },
-    };
-    
-    setInCall({ type, peer, roomName, jitsiConfig });
+      isVideoCall: type === 'video'
+    });
   }
 
   function endCall() {
@@ -487,30 +466,15 @@ export default function ChatList() {
         <CreateGroupModal onClose={() => setShowCreateGroup(false)} userId={user?.uid} onCreated={loadChats} />
       )}
 
-      {/* Call Overlay with Jitsi Meet */}
+      {/* Call Overlay with Jitsi Meet - using 8x8 JaaS for unlimited calls */}
       {inCall && (
-        <div className="messenger-call-overlay">
-          <div className="messenger-call-header">
-            <div className="messenger-call-info">
-              <img src={peerPhoto} alt="" className="messenger-call-avatar-small" />
-              <div>
-                <div className="messenger-call-name-small">{peerName}</div>
-                <div className="messenger-call-status-small">
-                  {inCall.type === 'video' ? 'Video Call' : 'Voice Call'}
-                </div>
-              </div>
-            </div>
-            <button className="messenger-call-btn end" title="End call" onClick={endCall}>
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
-            </button>
-          </div>
-          <iframe
-            className="messenger-jitsi-frame"
-            src={`https://meet.jit.si/${inCall.roomName}#userInfo.displayName="${encodeURIComponent(user?.displayName || 'User')}"&config.startWithAudioMuted=${inCall.type === 'voice' ? 'false' : 'false'}&config.startWithVideoMuted=${inCall.type === 'voice' ? 'true' : 'false'}&config.prejoinPageEnabled=false`}
-            allow="camera; microphone; fullscreen; display-capture; autoplay"
-            allowFullScreen
-          />
-        </div>
+        <VideoCall
+          roomName={inCall.roomName}
+          userName={user?.displayName || 'CampusKart User'}
+          userEmail={user?.email || ''}
+          isVideoCall={inCall.isVideoCall}
+          onClose={endCall}
+        />
       )}
     </div>
   );
