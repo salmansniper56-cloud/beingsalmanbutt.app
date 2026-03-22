@@ -61,17 +61,13 @@ export default function AIChat() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model,
-          temperature: 0.6,
-          top_p: 0.95,
-          max_tokens: 4096,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             ...newMessages.map(m => ({
@@ -79,13 +75,12 @@ export default function AIChat() {
               content: m.content,
             })),
           ],
-          stream: false,
         }),
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.error?.message || `API error ${res.status}`);
+        throw new Error(errData?.error || `API error ${res.status}`);
       }
 
       const data  = await res.json();
@@ -93,9 +88,12 @@ export default function AIChat() {
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
       console.error("NVIDIA API error:", err);
+      const errorMsg = err.message?.includes("Failed to fetch") 
+        ? "Cannot connect to AI service. This may be a CORS issue - the API needs to be called from a backend server."
+        : (err.message || "Sorry, something went wrong. Please try again.");
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: "Sorry, something went wrong. Please try again.",
+        content: errorMsg,
       }]);
     } finally {
       setLoading(false);
