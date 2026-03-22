@@ -12,6 +12,7 @@ import {
   createGroupChat,
   searchUsers,
 } from '../lib/firestore';
+import { uploadChatMedia } from '../lib/storage';
 import './ChatList.css';
 
 export default function ChatList() {
@@ -32,6 +33,7 @@ export default function ChatList() {
   const [peer, setPeer] = useState(null);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [inCall, setInCall] = useState(null);
   const bottomRef = useRef(null);
@@ -113,9 +115,32 @@ export default function ChatList() {
 
   async function handlePhotoUpload(e) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    // For now, show placeholder - integrate with Cloudinary
-    alert('Photo upload coming soon! This will integrate with Cloudinary.');
+    if (!file || !chatId || !user?.uid) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+    
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image must be less than 10MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const mediaUrl = await uploadChatMedia(chatId, file);
+      await sendMessage(chatId, user.uid, '', mediaUrl, 'image');
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+      // Clear the input so same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   }
 
   function startCall(type) {
@@ -303,9 +328,21 @@ export default function ChatList() {
                 style={{ display: 'none' }} 
                 accept="image/*" 
                 onChange={handlePhotoUpload}
+                disabled={uploading}
               />
-              <button type="button" className="messenger-media-btn" title="Photo" onClick={() => fileInputRef.current?.click()}>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <button 
+                type="button" 
+                className="messenger-media-btn" 
+                title={uploading ? 'Uploading...' : 'Photo'} 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={uploading ? { opacity: 0.5 } : {}}
+              >
+                {uploading ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="spin"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                )}
               </button>
               <button type="button" className="messenger-media-btn" title="Sticker">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>

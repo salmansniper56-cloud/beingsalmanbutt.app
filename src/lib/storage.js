@@ -47,3 +47,7 @@ export async function uploadPostMedia(postId, files, onProgress) {
   }
   return urls;
 }
+
+export async function uploadChatMedia(chatId, file) {
+  return uploadToCloudinary(file, `chats/${chatId}`);
+}

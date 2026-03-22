@@ -6,6 +6,16 @@
   color: #e4e6eb;
 }
 
+/* Spinner animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 /* Left Sidebar */
 .messenger-sidebar {
   width: 360px;
