@@ -57,6 +57,9 @@ export default function Feed() {
         <button type="button" className={`feed-tab ${feedMode === 'ads' ? 'active' : ''}`} onClick={() => setFeedMode('ads')}>
           Marketplace
         </button>
+        <Link to="/meetings" className="feed-tab feed-tab-meetings">
+          📹 Meetings
+        </Link>
         <Link to="/ai" className="feed-tab feed-tab-ai">
           🤖 AI Assistant
         </Link>
