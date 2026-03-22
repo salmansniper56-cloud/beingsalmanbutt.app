@@ -57,6 +57,9 @@ export default function Feed() {
         <button type="button" className={`feed-tab ${feedMode === 'ads' ? 'active' : ''}`} onClick={() => setFeedMode('ads')}>
           Marketplace
         </button>
+        <Link to="/ai" className="feed-tab feed-tab-ai">
+          🤖 AI Assistant
+        </Link>
         {feedMode === 'ads' && (
           <select className="feed-category-select" value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="">All categories</option>

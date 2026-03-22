@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import "./CampusAI.css";
 
 const MODELS = [
-  { value: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super 120B", badge: "Smart", color: "sonnet" },
-  { value: "deepseek-ai/deepseek-v3.1", label: "DeepSeek V3.1", badge: "Fast", color: "haiku" },
-  { value: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B", badge: "Fast", color: "haiku" },
+  { value: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super", badge: "Smart" },
+  { value: "deepseek-ai/deepseek-v3.1", label: "DeepSeek V3.1", badge: "Fast" },
+  { value: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B", badge: "Fast" },
 ];
 
 const SYSTEM_PROMPT = `You are CampusKart AI — a friendly, knowledgeable study assistant for Pakistani university students.
@@ -16,11 +16,16 @@ Help students with:
 - General knowledge questions
 Keep answers clear, concise, and student-friendly. Use simple English.`;
 
+const SUGGESTIONS = [
+  "Explain photosynthesis simply",
+  "Help me prepare for CSS exams",
+  "Best books for FAST entry test",
+  "Tips for effective study habits",
+];
+
 export default function CampusAI() {
   const [model, setModel] = useState("nvidia/nemotron-3-super-120b-a12b");
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi! I'm your campus study assistant powered by NVIDIA Nemotron AI. Ask me anything — concepts, exam prep, book recommendations, or how to use CampusKart." },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const msgsEndRef = useRef(null);
@@ -34,11 +39,11 @@ export default function CampusAI() {
     inputRef.current?.focus();
   }, []);
 
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
+  const sendMessage = async (text) => {
+    const msgText = text || input.trim();
+    if (!msgText || loading) return;
 
-    const userMsg = { role: "user", content: text };
+    const userMsg = { role: "user", content: msgText };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
@@ -47,17 +52,12 @@ export default function CampusAI() {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            ...newMessages.map(m => ({
-              role: m.role === "assistant" ? "assistant" : "user",
-              content: m.content,
-            })),
+            ...newMessages.map(m => ({ role: m.role, content: m.content })),
           ],
         }),
       });
@@ -88,90 +88,123 @@ export default function CampusAI() {
     }
   };
 
-  const clearChat = () => {
-    setMessages([{ role: "assistant", content: "Chat cleared! Ask me anything." }]);
-  };
+  const clearChat = () => setMessages([]);
 
   const selectedModel = MODELS.find(m => m.value === model);
 
   return (
-    <div className="campus-ai-page">
-      <div className="campus-ai-header">
-        <Link to="/map" className="campus-ai-back">← Back to Map</Link>
-        <div className="campus-ai-title">
-          <span className="campus-ai-icon">🤖</span>
-          <div>
-            <h1>CampusKart AI</h1>
-            <p>Powered by NVIDIA Nemotron</p>
+    <div className="ai-page">
+      {/* Sidebar */}
+      <aside className="ai-sidebar">
+        <Link to="/feed" className="ai-sidebar-back">
+          ← Back to Feed
+        </Link>
+        
+        <button className="ai-new-chat" onClick={clearChat}>
+          + New chat
+        </button>
+
+        <div className="ai-sidebar-section">
+          <label className="ai-sidebar-label">Model</label>
+          <select
+            className="ai-model-select"
+            value={model}
+            onChange={e => setModel(e.target.value)}
+          >
+            {MODELS.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+          {selectedModel && (
+            <span className="ai-model-badge">{selectedModel.badge}</span>
+          )}
+        </div>
+
+        <div className="ai-sidebar-footer">
+          <div className="ai-brand">
+            <span className="ai-brand-icon">🎓</span>
+            <span>CampusKart AI</span>
           </div>
         </div>
-        <button className="campus-ai-clear" onClick={clearChat} title="Clear chat">
-          🗑️ Clear
-        </button>
-      </div>
+      </aside>
 
-      <div className="campus-ai-modelbar">
-        <span className="campus-ai-model-label">Model:</span>
-        <select
-          className="campus-ai-model-select"
-          value={model}
-          onChange={e => setModel(e.target.value)}
-        >
-          {MODELS.map(m => (
-            <option key={m.value} value={m.value}>{m.label}</option>
-          ))}
-        </select>
-        <span className={`campus-ai-badge campus-ai-badge-${selectedModel?.color}`}>
-          {selectedModel?.badge}
-        </span>
-      </div>
-
-      <div className="campus-ai-messages">
-        {messages.map((msg, i) => (
-          <div key={i} className={`campus-ai-msg-wrap ${msg.role === "user" ? "user" : "ai"}`}>
-            {msg.role === "assistant" && (
-              <div className="campus-ai-msg-avatar">🤖</div>
-            )}
-            <div className={`campus-ai-msg ${msg.role === "user" ? "campus-ai-msg-user" : "campus-ai-msg-ai"}`}>
-              {msg.content}
+      {/* Main Chat Area */}
+      <main className="ai-main">
+        {messages.length === 0 ? (
+          <div className="ai-welcome">
+            <div className="ai-welcome-icon">🤖</div>
+            <h1>CampusKart AI</h1>
+            <p>Your personal study assistant for Pakistani university students</p>
+            
+            <div className="ai-suggestions">
+              {SUGGESTIONS.map((s, i) => (
+                <button
+                  key={i}
+                  className="ai-suggestion"
+                  onClick={() => sendMessage(s)}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
-            {msg.role === "user" && (
-              <div className="campus-ai-msg-avatar user">👤</div>
-            )}
           </div>
-        ))}
-        {loading && (
-          <div className="campus-ai-msg-wrap ai">
-            <div className="campus-ai-msg-avatar">🤖</div>
-            <div className="campus-ai-msg campus-ai-msg-ai">
-              <div className="campus-ai-typing">
-                <span /><span /><span />
+        ) : (
+          <div className="ai-messages">
+            {messages.map((msg, i) => (
+              <div key={i} className={`ai-message ${msg.role}`}>
+                <div className="ai-message-avatar">
+                  {msg.role === "assistant" ? "🤖" : "👤"}
+                </div>
+                <div className="ai-message-content">
+                  <div className="ai-message-role">
+                    {msg.role === "assistant" ? "CampusKart AI" : "You"}
+                  </div>
+                  <div className="ai-message-text">{msg.content}</div>
+                </div>
               </div>
-            </div>
+            ))}
+            {loading && (
+              <div className="ai-message assistant">
+                <div className="ai-message-avatar">🤖</div>
+                <div className="ai-message-content">
+                  <div className="ai-message-role">CampusKart AI</div>
+                  <div className="ai-typing">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={msgsEndRef} />
           </div>
         )}
-        <div ref={msgsEndRef} />
-      </div>
 
-      <div className="campus-ai-input-area">
-        <textarea
-          ref={inputRef}
-          className="campus-ai-input"
-          placeholder="Ask anything about studies, exams, or campus life..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          rows={1}
-          disabled={loading}
-        />
-        <button
-          className="campus-ai-send-btn"
-          onClick={sendMessage}
-          disabled={loading || !input.trim()}
-        >
-          Send ➤
-        </button>
-      </div>
+        {/* Input Area */}
+        <div className="ai-input-container">
+          <div className="ai-input-wrapper">
+            <textarea
+              ref={inputRef}
+              className="ai-input"
+              placeholder="Message CampusKart AI..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKey}
+              rows={1}
+              disabled={loading}
+            />
+            <button
+              className="ai-send"
+              onClick={() => sendMessage()}
+              disabled={loading || !input.trim()}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <p className="ai-disclaimer">AI can make mistakes. Verify important information.</p>
+        </div>
+      </main>
     </div>
   );
 }

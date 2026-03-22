@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import mapboxgl from 'mapbox-gl';
@@ -432,11 +431,6 @@ export default function CampusMap() {
           {locating ? '⏳' : '📍'}
         </button>
       </div>
-
-      {/* AI Assistant Link */}
-      <Link to="/ai" className="cmap-ai-btn" title="CampusKart AI">
-        🤖 AI Assistant
-      </Link>
 
       {/* Directions card */}
       {directions && (
