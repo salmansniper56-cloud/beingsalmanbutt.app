@@ -4,6 +4,7 @@ import "./CampusAI.css";
 
 const MODELS = [
   { value: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super", badge: "Smart" },
+  { value: "qwen/qwen3.5-122b-a10b", label: "Qwen 3.5 122B", badge: "Thinking" },
   { value: "deepseek-ai/deepseek-v3.1", label: "DeepSeek V3.1", badge: "Fast" },
   { value: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B", badge: "Fast" },
 ];
