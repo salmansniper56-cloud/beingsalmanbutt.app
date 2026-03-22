@@ -69,9 +69,9 @@ export default function AIChat() {
         },
         body: JSON.stringify({
           model,
-          temperature: 1,
+          temperature: 0.6,
           top_p: 0.95,
-          max_tokens: 16384,
+          max_tokens: 4096,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             ...newMessages.map(m => ({
@@ -79,7 +79,6 @@ export default function AIChat() {
               content: m.content,
             })),
           ],
-          extra_body: { chat_template_kwargs: { enable_thinking: true }, reasoning_budget: 16384 },
           stream: false,
         }),
       });
