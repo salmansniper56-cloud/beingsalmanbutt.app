@@ -23,6 +23,7 @@ function isValidPriceId(id) {
 }
 
 const ALLOWED_AI_MODELS = new Set([
+  'nvidia/nemotron-3-super-120b-a12b',
   'deepseek-ai/deepseek-v3.1',
   'meta/llama-3.1-70b-instruct',
 ]);
@@ -40,7 +41,7 @@ export const askCampusAI = onCall(
   { region: 'us-central1', secrets: ['NVIDIA_API_KEY'] },
   async (request) => {
     const input = (request.data && typeof request.data === 'object') ? request.data : {};
-    const model = ALLOWED_AI_MODELS.has(input.model) ? input.model : 'deepseek-ai/deepseek-v3.1';
+    const model = ALLOWED_AI_MODELS.has(input.model) ? input.model : 'nvidia/nemotron-3-super-120b-a12b';
     const messages = sanitizeMessages(input.messages);
 
     if (!messages.length) {
@@ -60,9 +61,14 @@ export const askCampusAI = onCall(
     try {
       const completion = await client.chat.completions.create({
         model,
-        temperature: 0.2,
-        top_p: 0.7,
-        max_tokens: 1024,
+        temperature: 1,
+        top_p: 0.95,
+        max_tokens: 16384,
+        stream: true,
+        extra_body: {
+          chat_template_kwargs: { enable_thinking: true },
+          reasoning_budget: 16384,
+        },
         messages: [
           {
             role: 'system',
@@ -72,12 +78,24 @@ export const askCampusAI = onCall(
         ],
       });
 
-      const reply = completion.choices?.[0]?.message?.content?.trim();
+      let reply = '';
+      let reasoning = '';
+      for await (const chunk of completion) {
+        if (!chunk.choices || !chunk.choices.length) continue;
+        const reasoningContent = chunk.choices[0].delta?.reasoning_content;
+        if (reasoningContent) {
+          reasoning += reasoningContent;
+        }
+        if (chunk.choices[0].delta?.content) {
+          reply += chunk.choices[0].delta.content;
+        }
+      }
+
       if (!reply) {
         throw new Error('No response received from NVIDIA model.');
       }
 
-      return { reply, model };
+      return { reply: reply.trim(), model, reasoning: reasoning.trim() || undefined };
     } catch (err) {
       console.error('askCampusAI error:', err?.message || err);
       throw new HttpsError('internal', err?.message || 'AI request failed');

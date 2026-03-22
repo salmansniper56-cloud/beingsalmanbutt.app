@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import "./AIChat.css";
 
 const MODELS = [
-  { value: "deepseek-ai/deepseek-v3.1", label: "DeepSeek V3.1", badge: "Smart", color: "sonnet" },
+  { value: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super 120B", badge: "Smart", color: "sonnet" },
+  { value: "deepseek-ai/deepseek-v3.1", label: "DeepSeek V3.1", badge: "Fast", color: "haiku" },
   { value: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B", badge: "Fast", color: "haiku" },
 ];
 
@@ -16,9 +17,9 @@ Keep answers clear, concise, and student-friendly. Use simple English.`;
 
 export default function AIChat() {
   const [open, setOpen]         = useState(false);
-  const [model, setModel]       = useState("deepseek-ai/deepseek-v3.1");
+  const [model, setModel]       = useState("nvidia/nemotron-3-super-120b-a12b");
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi! I'm your campus study assistant powered by DeepSeek AI. Ask me anything — concepts, exam prep, book recommendations, or how to use CampusKart." },
+    { role: "assistant", content: "Hi! I'm your campus study assistant powered by NVIDIA Nemotron AI. Ask me anything — concepts, exam prep, book recommendations, or how to use CampusKart." },
   ]);
   const [input, setInput]   = useState("");
   const [loading, setLoading] = useState(false);
@@ -68,9 +69,9 @@ export default function AIChat() {
         },
         body: JSON.stringify({
           model,
-          temperature: 0.2,
-          top_p: 0.7,
-          max_tokens: 8192,
+          temperature: 1,
+          top_p: 0.95,
+          max_tokens: 16384,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             ...newMessages.map(m => ({
@@ -78,7 +79,7 @@ export default function AIChat() {
               content: m.content,
             })),
           ],
-          extra_body: { chat_template_kwargs: { thinking: true } },
+          extra_body: { chat_template_kwargs: { enable_thinking: true }, reasoning_budget: 16384 },
           stream: false,
         }),
       });
@@ -128,7 +129,7 @@ export default function AIChat() {
             </div>
             <div style={{ flex: 1 }}>
               <div className="aichat-header-title">CampusKart AI</div>
-              <div className="aichat-header-sub">Powered by DeepSeek · always here</div>
+              <div className="aichat-header-sub">Powered by NVIDIA Nemotron · always here</div>
             </div>
             <button className="aichat-icon-btn" onClick={clearChat} title="Clear chat">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -204,7 +205,7 @@ export default function AIChat() {
               </svg>
             </button>
           </div>
-          <div className="aichat-powered">Powered by NVIDIA DeepSeek AI</div>
+          <div className="aichat-powered">Powered by NVIDIA Nemotron AI</div>
         </div>
       )}
 
