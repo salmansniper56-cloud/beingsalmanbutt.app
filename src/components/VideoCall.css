@@ -1,106 +1,392 @@
-.video-call-overlay {
+/* CampusKart Meet - Google Meet Style */
+.vc-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: #0a0a0a;
-  z-index: 10000;
+  inset: 0;
+  background: #202124;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
+  font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.video-call-header {
+/* Header */
+.vc-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-bottom: 1px solid #333;
+  background: #1a1a1d;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-.video-call-info {
+.vc-header-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.video-call-badge {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
+.vc-logo {
+  font-size: 24px;
 }
 
-.video-call-room {
-  color: #fff;
-  font-size: 15px;
+.vc-title {
+  color: white;
+  font-size: 18px;
   font-weight: 500;
 }
 
-.video-call-end-btn {
+.vc-participants-count {
+  color: rgba(255,255,255,0.6);
+  font-size: 14px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255,255,255,0.2);
+}
+
+.vc-header-right {
+  display: flex;
+  gap: 12px;
+}
+
+.vc-copy-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vc-copy-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.vc-end-btn {
+  background: #ea4335;
+  border: none;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vc-end-btn:hover {
+  background: #d93025;
+}
+
+/* Main Area */
+.vc-main {
+  flex: 1;
+  display: flex;
+  padding: 16px;
+  gap: 16px;
+  overflow: hidden;
+}
+
+/* Video Grid */
+.vc-grid {
+  flex: 1;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+.vc-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.vc-grid-3, .vc-grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+/* Video Container */
+.vc-video-container {
+  position: relative;
+  background: #3c4043;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.vc-video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vc-video-container.vc-local video {
+  transform: scaleX(-1);
+}
+
+.vc-video-hidden {
+  display: none;
+}
+
+.vc-avatar {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+  justify-content: center;
+  background: linear-gradient(135deg, #5f6368, #3c4043);
+}
+
+.vc-avatar span {
+  width: 80px;
+  height: 80px;
+  background: #8ab4f8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.vc-video-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.6));
+}
+
+.vc-name {
   color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 25px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
+}
+
+.vc-screen-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #8ab4f8;
+  color: #202124;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Empty/Waiting State */
+.vc-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vc-waiting {
+  text-align: center;
+  color: rgba(255,255,255,0.7);
+}
+
+.vc-waiting span {
+  font-size: 64px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.vc-waiting p {
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+.vc-room-code {
+  font-size: 14px !important;
+  color: rgba(255,255,255,0.5);
+  font-family: monospace;
+}
+
+/* Chat Panel */
+.vc-chat {
+  width: 320px;
+  background: #292a2d;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.vc-chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  font-weight: 500;
+}
+
+.vc-chat-header button {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  font-size: 18px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
 }
 
-.video-call-end-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
-}
-
-.video-call-end-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.video-call-container {
+.vc-chat-messages {
   flex: 1;
-  width: 100%;
-  background: #0a0a0a;
+  overflow-y: auto;
+  padding: 12px;
 }
 
-.video-call-container iframe {
-  width: 100% !important;
-  height: 100% !important;
-  border: none !important;
+.vc-chat-msg {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  border-top-left-radius: 4px;
+}
+
+.vc-chat-msg.mine {
+  background: #8ab4f8;
+  border-radius: 12px;
+  border-top-right-radius: 4px;
+}
+
+.vc-chat-msg.mine .vc-chat-sender {
+  color: rgba(32,33,36,0.7);
+}
+
+.vc-chat-msg.mine p {
+  color: #202124;
+}
+
+.vc-chat-sender {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 4px;
+}
+
+.vc-chat-msg p {
+  margin: 0;
+  color: white;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.vc-chat-input {
+  display: flex;
+  padding: 12px;
+  gap: 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.vc-chat-input input {
+  flex: 1;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  padding: 10px 14px;
+  border-radius: 20px;
+  color: white;
+  font-size: 14px;
+}
+
+.vc-chat-input input::placeholder {
+  color: rgba(255,255,255,0.4);
+}
+
+.vc-chat-input button {
+  background: #8ab4f8;
+  border: none;
+  color: #202124;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Controls */
+.vc-controls {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 20px 24px;
+  background: #1a1a1d;
+}
+
+.vc-ctrl-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: #3c4043;
+  border: none;
+  padding: 16px 24px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 80px;
+}
+
+.vc-ctrl-btn:hover {
+  background: #5f6368;
+}
+
+.vc-ctrl-btn span {
+  color: white;
+  font-size: 12px;
+}
+
+.vc-ctrl-btn.off {
+  background: #ea4335;
+}
+
+.vc-ctrl-btn.active {
+  background: #34a853;
+}
+
+.vc-ctrl-btn.end {
+  background: #ea4335;
+}
+
+.vc-ctrl-btn.end:hover {
+  background: #d93025;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .video-call-header {
-    padding: 10px 15px;
-    flex-wrap: wrap;
-    gap: 10px;
+  .vc-header {
+    padding: 10px 14px;
   }
-
-  .video-call-info {
-    flex-wrap: wrap;
+  
+  .vc-title {
+    display: none;
   }
-
-  .video-call-badge {
-    font-size: 12px;
-    padding: 5px 10px;
+  
+  .vc-main {
+    padding: 8px;
   }
-
-  .video-call-room {
-    font-size: 13px;
+  
+  .vc-chat {
+    position: fixed;
+    bottom: 100px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: 50vh;
+    z-index: 10;
   }
-
-  .video-call-end-btn {
-    padding: 8px 16px;
-    font-size: 13px;
+  
+  .vc-controls {
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .vc-ctrl-btn {
+    padding: 12px 16px;
+    min-width: auto;
+  }
+  
+  .vc-ctrl-btn span {
+    display: none;
   }
 }

@@ -1,111 +1,478 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { db } from '../lib/firebase';
+import { doc, setDoc, onSnapshot, collection, addDoc, deleteDoc, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
 import './VideoCall.css';
 
-export default function VideoCall({ roomName, userName, onClose, isVideoCall = true }) {
-  const containerRef = useRef(null);
-  const apiRef = useRef(null);
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+  ],
+};
 
+export default function VideoCall({ roomName, userName, onClose, isVideoCall = true }) {
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStreams, setRemoteStreams] = useState({});
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(!isVideoCall);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [participants, setParticipants] = useState([]);
+  const [copied, setCopied] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [showChat, setShowChat] = useState(false);
+
+  const localVideoRef = useRef(null);
+  const peerConnections = useRef({});
+  const localStreamRef = useRef(null);
+  const roomId = roomName.replace(/[^a-zA-Z0-9-]/g, '');
+  const odIdRef = useRef(`user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  );
+
+  // Get user media
+  const startMedia = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: isVideoCall ? { width: 1280, height: 720, facingMode: 'user' } : false,
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+      setLocalStream(stream);
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      return stream;
+    } catch (err) {
+      console.error('Media error:', err);
+      alert('Could not access camera/microphone. Please allow permissions.');
+      return null;
+    }
+  }, [isVideoCall]);
+
+  // Create peer connection for a participant
+  const createPeerConnection = useCallback((odId, isInitiator) => {
+    if (peerConnections.current[odId]) {
+      return peerConnections.current[odId];
+    }
+
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    peerConnections.current[odId] = pc;
+
+    // Add local tracks
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => {
+        pc.addTrack(track, localStreamRef.current);
+      });
+    }
+
+    // Handle incoming tracks
+    pc.ontrack = (event) => {
+      setRemoteStreams(prev => ({
+        ...prev,
+        [odId]: event.streams[0],
+      }));
+    };
+
+    // Handle ICE candidates
+    pc.onicecandidate = async (event) => {
+      if (event.candidate) {
+        const candidateRef = collection(db, 'calls', roomId, 'candidates');
+        await addDoc(candidateRef, {
+          odId: odIdRef.current,
+          toId: odId,
+          candidate: event.candidate.toJSON(),
+          timestamp: serverTimestamp(),
+        });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        setRemoteStreams(prev => {
+          const newStreams = { ...prev };
+          delete newStreams[odId];
+          return newStreams;
+        });
+        setParticipants(prev => prev.filter(p => p.odId !== odId));
+      }
+    };
+
+    return pc;
+  }, [roomId]);
+
+  // Initialize room and signaling
   useEffect(() => {
-    // Load 8x8 Jitsi script
-    const loadScript = () => {
-      return new Promise((resolve, reject) => {
-        if (window.JitsiMeetExternalAPI) {
-          resolve();
-          return;
+    let unsubscribeParticipants;
+    let unsubscribeCandidates;
+    let unsubscribeOffers;
+    let unsubscribeAnswers;
+    let unsubscribeChat;
+
+    const init = async () => {
+      const stream = await startMedia();
+      if (!stream) return;
+
+      const roomRef = doc(db, 'calls', roomId);
+      const participantsRef = collection(roomRef, 'participants');
+      const offersRef = collection(roomRef, 'offers');
+      const answersRef = collection(roomRef, 'answers');
+      const candidatesRef = collection(roomRef, 'candidates');
+      const chatRef = collection(roomRef, 'chat');
+
+      // Join room
+      const myParticipantRef = doc(participantsRef, odIdRef.current);
+      await setDoc(myParticipantRef, {
+        odId: odIdRef.current,
+        name: userName || 'Guest',
+        joinedAt: serverTimestamp(),
+      });
+
+      // Listen for participants
+      unsubscribeParticipants = onSnapshot(participantsRef, async (snapshot) => {
+        const parts = snapshot.docs.map(d => d.data());
+        setParticipants(parts);
+
+        // Create offers for new participants
+        for (const part of parts) {
+          if (part.odId !== odIdRef.current && !peerConnections.current[part.odId]) {
+            // Only initiate if our ID is "greater" to avoid duplicate connections
+            if (odIdRef.current > part.odId) {
+              const pc = createPeerConnection(part.odId, true);
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+
+              await addDoc(offersRef, {
+                fromId: odIdRef.current,
+                toId: part.odId,
+                offer: { type: offer.type, sdp: offer.sdp },
+                timestamp: serverTimestamp(),
+              });
+            }
+          }
         }
-        const script = document.createElement('script');
-        script.src = 'https://8x8.vc/vpaas-magic-cookie-30a3594d6d0d4aa4b2e56d2e2c5b0e1e/external_api.js';
-        script.async = true;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
+      });
+
+      // Listen for offers
+      unsubscribeOffers = onSnapshot(offersRef, async (snapshot) => {
+        for (const change of snapshot.docChanges()) {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            if (data.toId === odIdRef.current) {
+              const pc = createPeerConnection(data.fromId, false);
+              await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+
+              await addDoc(answersRef, {
+                fromId: odIdRef.current,
+                toId: data.fromId,
+                answer: { type: answer.type, sdp: answer.sdp },
+                timestamp: serverTimestamp(),
+              });
+            }
+          }
+        }
+      });
+
+      // Listen for answers
+      unsubscribeAnswers = onSnapshot(answersRef, async (snapshot) => {
+        for (const change of snapshot.docChanges()) {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            if (data.toId === odIdRef.current) {
+              const pc = peerConnections.current[data.fromId];
+              if (pc && !pc.currentRemoteDescription) {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+              }
+            }
+          }
+        }
+      });
+
+      // Listen for ICE candidates
+      unsubscribeCandidates = onSnapshot(candidatesRef, async (snapshot) => {
+        for (const change of snapshot.docChanges()) {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            if (data.toId === odIdRef.current) {
+              const pc = peerConnections.current[data.odId];
+              if (pc) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                } catch (e) {
+                  console.error('ICE error:', e);
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Listen for chat messages
+      unsubscribeChat = onSnapshot(chatRef, (snapshot) => {
+        const msgs = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+        setChatMessages(msgs);
       });
     };
 
-    const initMeeting = async () => {
-      try {
-        await loadScript();
-
-        const domain = '8x8.vc';
-        const options = {
-          roomName: `vpaas-magic-cookie-30a3594d6d0d4aa4b2e56d2e2c5b0e1e/${roomName}`,
-          parentNode: containerRef.current,
-          width: '100%',
-          height: '100%',
-          configOverwrite: {
-            startWithAudioMuted: false,
-            startWithVideoMuted: !isVideoCall,
-            prejoinPageEnabled: false,
-            disableDeepLinking: true,
-            disableInviteFunctions: false,
-            hideConferenceSubject: false,
-            subject: 'CampusKart Meeting',
-            defaultLanguage: 'en',
-            resolution: 720,
-            p2p: { enabled: true },
-          },
-          interfaceConfigOverwrite: {
-            TOOLBAR_BUTTONS: [
-              'microphone', 'camera', 'desktop', 'fullscreen',
-              'hangup', 'chat', 'raisehand', 'tileview',
-              'videoquality', 'settings', 'invite', 'participants-pane'
-            ],
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            SHOW_BRAND_WATERMARK: false,
-            MOBILE_APP_PROMO: false,
-            HIDE_INVITE_MORE_HEADER: false,
-            DISABLE_JOIN_LEAVE_NOTIFICATIONS: false,
-          },
-          userInfo: {
-            displayName: userName || 'CampusKart User',
-          },
-        };
-
-        const api = new window.JitsiMeetExternalAPI(domain, options);
-        apiRef.current = api;
-
-        api.addListener('videoConferenceLeft', () => onClose?.());
-        api.addListener('readyToClose', () => onClose?.());
-      } catch (err) {
-        console.error('Meeting error:', err);
-      }
-    };
-
-    initMeeting();
+    init();
 
     return () => {
-      if (apiRef.current) {
-        apiRef.current.dispose();
-        apiRef.current = null;
-      }
-    };
-  }, [roomName, userName, isVideoCall, onClose]);
+      // Cleanup
+      if (unsubscribeParticipants) unsubscribeParticipants();
+      if (unsubscribeCandidates) unsubscribeCandidates();
+      if (unsubscribeOffers) unsubscribeOffers();
+      if (unsubscribeAnswers) unsubscribeAnswers();
+      if (unsubscribeChat) unsubscribeChat();
 
-  const handleEndCall = () => {
-    if (apiRef.current) {
-      apiRef.current.executeCommand('hangup');
+      // Close all peer connections
+      Object.values(peerConnections.current).forEach(pc => pc.close());
+
+      // Stop local stream
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+
+      // Remove participant from room
+      const participantRef = doc(db, 'calls', roomId, 'participants', odIdRef.current);
+      deleteDoc(participantRef).catch(() => {});
+    };
+  }, [roomId, userName, startMedia, createPeerConnection]);
+
+  // Toggle mute
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsMuted(!isMuted);
     }
+  };
+
+  // Toggle video
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsVideoOff(!isVideoOff);
+    }
+  };
+
+  // Screen share
+  const toggleScreenShare = async () => {
+    if (isScreenSharing) {
+      // Stop screen share, switch back to camera
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720 },
+        audio: true,
+      });
+      const videoTrack = stream.getVideoTracks()[0];
+
+      Object.values(peerConnections.current).forEach(pc => {
+        const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(videoTrack);
+      });
+
+      localStreamRef.current.getVideoTracks()[0]?.stop();
+      localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      setLocalStream(stream);
+      setIsScreenSharing(false);
+    } else {
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { cursor: 'always' },
+          audio: false,
+        });
+        const screenTrack = screenStream.getVideoTracks()[0];
+
+        Object.values(peerConnections.current).forEach(pc => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) sender.replaceTrack(screenTrack);
+        });
+
+        screenTrack.onended = () => toggleScreenShare();
+
+        if (localVideoRef.current) localVideoRef.current.srcObject = screenStream;
+        setIsScreenSharing(true);
+      } catch (err) {
+        console.error('Screen share error:', err);
+      }
+    }
+  };
+
+  // Copy meeting link
+  const copyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Send chat message
+  const sendChat = async () => {
+    if (!chatInput.trim()) return;
+    const chatRef = collection(db, 'calls', roomId, 'chat');
+    await addDoc(chatRef, {
+      sender: userName || 'Guest',
+      senderId: odIdRef.current,
+      message: chatInput.trim(),
+      timestamp: serverTimestamp(),
+    });
+    setChatInput('');
+  };
+
+  // End call
+  const handleEndCall = async () => {
+    // Stop all tracks
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+
+    // Close peer connections
+    Object.values(peerConnections.current).forEach(pc => pc.close());
+
+    // Remove from participants
+    try {
+      const participantRef = doc(db, 'calls', roomId, 'participants', odIdRef.current);
+      await deleteDoc(participantRef);
+    } catch (e) {}
+
     onClose?.();
   };
 
+  const remoteStreamEntries = Object.entries(remoteStreams);
+
   return (
-    <div className="video-call-overlay">
-      <div className="video-call-header">
-        <div className="video-call-info">
-          <span className="video-call-badge">
-            {isVideoCall ? '📹 Video Meeting' : '📞 Voice Call'}
-          </span>
-          <span className="video-call-room">CampusKart Meeting</span>
+    <div className="vc-overlay">
+      {/* Header */}
+      <div className="vc-header">
+        <div className="vc-header-left">
+          <span className="vc-logo">📹</span>
+          <span className="vc-title">CampusKart Meet</span>
+          <span className="vc-participants-count">{participants.length} in call</span>
         </div>
-        <button className="video-call-end-btn" onClick={handleEndCall}>
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-          </svg>
-          Leave Meeting
+        <div className="vc-header-right">
+          <button className="vc-copy-btn" onClick={copyLink}>
+            {copied ? '✓ Copied!' : '🔗 Copy Link'}
+          </button>
+          <button className="vc-end-btn" onClick={handleEndCall}>
+            Leave
+          </button>
+        </div>
+      </div>
+
+      {/* Video Grid */}
+      <div className="vc-main">
+        <div className={`vc-grid vc-grid-${Math.min(remoteStreamEntries.length + 1, 4)}`}>
+          {/* Local Video */}
+          <div className="vc-video-container vc-local">
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className={isVideoOff ? 'vc-video-hidden' : ''}
+            />
+            {isVideoOff && (
+              <div className="vc-avatar">
+                <span>{(userName || 'G')[0].toUpperCase()}</span>
+              </div>
+            )}
+            <div className="vc-video-label">
+              <span className="vc-name">You {isMuted && '🔇'}</span>
+            </div>
+            {isScreenSharing && <div className="vc-screen-badge">Presenting</div>}
+          </div>
+
+          {/* Remote Videos */}
+          {remoteStreamEntries.map(([odId, stream]) => {
+            const participant = participants.find(p => p.odId === odId);
+            return (
+              <div key={odId} className="vc-video-container">
+                <video
+                  autoPlay
+                  playsInline
+                  ref={el => { if (el) el.srcObject = stream; }}
+                />
+                <div className="vc-video-label">
+                  <span className="vc-name">{participant?.name || 'Guest'}</span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Empty state */}
+          {remoteStreamEntries.length === 0 && (
+            <div className="vc-video-container vc-empty">
+              <div className="vc-waiting">
+                <span>👥</span>
+                <p>Waiting for others to join...</p>
+                <p className="vc-room-code">Room: {roomId}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Chat Panel */}
+        {showChat && (
+          <div className="vc-chat">
+            <div className="vc-chat-header">
+              <span>Chat</span>
+              <button onClick={() => setShowChat(false)}>✕</button>
+            </div>
+            <div className="vc-chat-messages">
+              {chatMessages.map(msg => (
+                <div key={msg.id} className={`vc-chat-msg ${msg.senderId === odIdRef.current ? 'mine' : ''}`}>
+                  <span className="vc-chat-sender">{msg.sender}</span>
+                  <p>{msg.message}</p>
+                </div>
+              ))}
+            </div>
+            <div className="vc-chat-input">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChat()}
+                placeholder="Type a message..."
+              />
+              <button onClick={sendChat}>Send</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Controls */}
+      <div className="vc-controls">
+        <button className={`vc-ctrl-btn ${isMuted ? 'off' : ''}`} onClick={toggleMute}>
+          {isMuted ? '🔇' : '🎤'}
+          <span>{isMuted ? 'Unmute' : 'Mute'}</span>
+        </button>
+        {isVideoCall && (
+          <button className={`vc-ctrl-btn ${isVideoOff ? 'off' : ''}`} onClick={toggleVideo}>
+            {isVideoOff ? '📷' : '🎥'}
+            <span>{isVideoOff ? 'Start Video' : 'Stop Video'}</span>
+          </button>
+        )}
+        <button className={`vc-ctrl-btn ${isScreenSharing ? 'active' : ''}`} onClick={toggleScreenShare}>
+          🖥️
+          <span>{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
+        </button>
+        <button className="vc-ctrl-btn" onClick={() => setShowChat(!showChat)}>
+          💬
+          <span>Chat</span>
+        </button>
+        <button className="vc-ctrl-btn end" onClick={handleEndCall}>
+          📞
+          <span>Leave</span>
         </button>
       </div>
-      <div ref={containerRef} className="video-call-container" />
     </div>
   );
 }
