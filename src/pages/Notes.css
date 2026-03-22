@@ -161,10 +161,19 @@
   border-color: #534AB7;
   transform: translateY(-2px);
 }
+.note-card-external {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #fff 100%);
+}
+.note-card-external:hover {
+  border-color: #059669;
+}
 .note-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .note-subject-icon { font-size: 22px; }
 .note-subject-badge {
@@ -174,6 +183,15 @@
   color: #3C3489;
   border-radius: 999px;
   font-weight: 500;
+}
+.note-vu-badge {
+  font-size: 10px;
+  padding: 3px 10px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 600;
+  margin-left: auto;
 }
 .note-title {
   font-family: 'Syne', sans-serif;
@@ -221,6 +239,12 @@
   margin-top: 4px;
 }
 .note-download-btn:hover { background: #3C3489; }
+.note-external-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+.note-external-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
 
 @media (max-width: 480px) {
   .notes-hero-title { font-size: 26px; }

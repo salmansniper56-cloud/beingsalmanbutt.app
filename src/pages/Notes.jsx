@@ -26,6 +26,190 @@ const SUBJECT_ICONS = {
   'Other': '📁',
 };
 
+// Virtual University of Pakistan Free Resources
+const VU_RESOURCES = [
+  {
+    id: 'vu-cs101',
+    title: 'CS101 - Introduction to Computing',
+    description: 'Complete video lectures and handouts covering basics of computing, hardware, software, and programming fundamentals.',
+    subject: 'Engineering / CS',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/CS101',
+    isExternal: true,
+  },
+  {
+    id: 'vu-cs201',
+    title: 'CS201 - Introduction to Programming',
+    description: 'C++ programming fundamentals including variables, loops, functions, arrays, pointers, and object-oriented concepts.',
+    subject: 'Engineering / CS',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/CS201',
+    isExternal: true,
+  },
+  {
+    id: 'vu-cs301',
+    title: 'CS301 - Data Structures',
+    description: 'Arrays, linked lists, stacks, queues, trees, graphs, sorting and searching algorithms with C++ implementation.',
+    subject: 'Engineering / CS',
+    university: 'Virtual University',
+    semester: 'Semester 3',
+    externalUrl: 'https://www.vu.edu.pk/Courses/CS301',
+    isExternal: true,
+  },
+  {
+    id: 'vu-cs304',
+    title: 'CS304 - Object Oriented Programming',
+    description: 'OOP concepts including classes, inheritance, polymorphism, encapsulation, and design patterns in C++.',
+    subject: 'Engineering / CS',
+    university: 'Virtual University',
+    semester: 'Semester 3',
+    externalUrl: 'https://www.vu.edu.pk/Courses/CS304',
+    isExternal: true,
+  },
+  {
+    id: 'vu-cs401',
+    title: 'CS401 - Computer Architecture',
+    description: 'Assembly language, CPU architecture, memory systems, I/O systems, and computer organization.',
+    subject: 'Engineering / CS',
+    university: 'Virtual University',
+    semester: 'Semester 4',
+    externalUrl: 'https://www.vu.edu.pk/Courses/CS401',
+    isExternal: true,
+  },
+  {
+    id: 'vu-cs403',
+    title: 'CS403 - Database Management Systems',
+    description: 'Relational databases, SQL, normalization, ER diagrams, and database design principles.',
+    subject: 'Engineering / CS',
+    university: 'Virtual University',
+    semester: 'Semester 4',
+    externalUrl: 'https://www.vu.edu.pk/Courses/CS403',
+    isExternal: true,
+  },
+  {
+    id: 'vu-cs601',
+    title: 'CS601 - Software Engineering',
+    description: 'SDLC, requirements engineering, software design, testing, project management, and agile methodologies.',
+    subject: 'Engineering / CS',
+    university: 'Virtual University',
+    semester: 'Semester 6',
+    externalUrl: 'https://www.vu.edu.pk/Courses/CS601',
+    isExternal: true,
+  },
+  {
+    id: 'vu-mth101',
+    title: 'MTH101 - Calculus and Analytical Geometry',
+    description: 'Limits, derivatives, integrals, analytical geometry, and applications of calculus.',
+    subject: 'Mathematics',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/MTH101',
+    isExternal: true,
+  },
+  {
+    id: 'vu-mth301',
+    title: 'MTH301 - Calculus II',
+    description: 'Advanced calculus including multiple integrals, vector calculus, and differential equations.',
+    subject: 'Mathematics',
+    university: 'Virtual University',
+    semester: 'Semester 3',
+    externalUrl: 'https://www.vu.edu.pk/Courses/MTH301',
+    isExternal: true,
+  },
+  {
+    id: 'vu-phy101',
+    title: 'PHY101 - Physics',
+    description: 'Mechanics, thermodynamics, waves, optics, and modern physics fundamentals.',
+    subject: 'Physics',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/PHY101',
+    isExternal: true,
+  },
+  {
+    id: 'vu-mgt101',
+    title: 'MGT101 - Financial Accounting',
+    description: 'Accounting principles, journal entries, ledger, trial balance, and financial statements.',
+    subject: 'Business / Commerce',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/MGT101',
+    isExternal: true,
+  },
+  {
+    id: 'vu-mgt201',
+    title: 'MGT201 - Financial Management',
+    description: 'Time value of money, capital budgeting, risk analysis, and corporate finance.',
+    subject: 'Business / Commerce',
+    university: 'Virtual University',
+    semester: 'Semester 2',
+    externalUrl: 'https://www.vu.edu.pk/Courses/MGT201',
+    isExternal: true,
+  },
+  {
+    id: 'vu-mkt501',
+    title: 'MKT501 - Marketing Management',
+    description: 'Marketing concepts, consumer behavior, market segmentation, and marketing strategies.',
+    subject: 'Business / Commerce',
+    university: 'Virtual University',
+    semester: 'Semester 5',
+    externalUrl: 'https://www.vu.edu.pk/Courses/MKT501',
+    isExternal: true,
+  },
+  {
+    id: 'vu-bio101',
+    title: 'BIO101 - Biology',
+    description: 'Cell biology, genetics, evolution, ecology, and human biology fundamentals.',
+    subject: 'Medical / Biology',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/BIO101',
+    isExternal: true,
+  },
+  {
+    id: 'vu-che101',
+    title: 'CHE101 - Chemistry',
+    description: 'Atomic structure, chemical bonding, thermodynamics, and organic chemistry basics.',
+    subject: 'Chemistry',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/CHE101',
+    isExternal: true,
+  },
+  {
+    id: 'vu-eng101',
+    title: 'ENG101 - English Comprehension',
+    description: 'Reading comprehension, grammar, vocabulary, and basic writing skills.',
+    subject: 'Other',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/ENG101',
+    isExternal: true,
+  },
+  {
+    id: 'vu-psy101',
+    title: 'PSY101 - Introduction to Psychology',
+    description: 'Human behavior, cognition, learning, memory, motivation, and psychological disorders.',
+    subject: 'Other',
+    university: 'Virtual University',
+    semester: 'Semester 1',
+    externalUrl: 'https://www.vu.edu.pk/Courses/PSY101',
+    isExternal: true,
+  },
+  {
+    id: 'vu-all-courses',
+    title: 'VU Complete Course Library',
+    description: 'Access all 200+ Virtual University courses with free video lectures, handouts, and past papers.',
+    subject: 'Other',
+    university: 'Virtual University',
+    semester: 'All Semesters',
+    externalUrl: 'https://www.vu.edu.pk/Courses/',
+    isExternal: true,
+  },
+];
+
 export default function Notes() {
   const { user } = useAuth();
   const [notes, setNotes] = useState([]);
@@ -67,7 +251,10 @@ export default function Notes() {
     fetchNotes();
   }, []);
 
-  const filtered = notes.filter(n => {
+  // Combine user-uploaded notes with VU resources
+  const allNotes = [...notes, ...VU_RESOURCES];
+
+  const filtered = allNotes.filter(n => {
     const matchSubject = activeSubject === 'All' || n.subject === activeSubject;
     const matchSearch =
       n.title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -163,12 +350,15 @@ export default function Notes() {
           ) : (
             <div className="notes-grid">
               {filtered.map(note => (
-                <div key={note.id} className="note-card">
+                <div key={note.id} className={`note-card ${note.isExternal ? 'note-card-external' : ''}`}>
                   <div className="note-card-top">
                     <div className="note-subject-icon">
                       {SUBJECT_ICONS[note.subject] || '📁'}
                     </div>
                     <span className="note-subject-badge">{note.subject}</span>
+                    {note.isExternal && (
+                      <span className="note-vu-badge">🎓 VU Official</span>
+                    )}
                   </div>
                   <h3 className="note-title">{note.title}</h3>
                   {note.description && (
@@ -201,16 +391,26 @@ export default function Notes() {
                     )}
                   </div>
                   <a
-                    href={note.fileURL}
+                    href={note.isExternal ? note.externalUrl : note.fileURL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="note-download-btn"
-                    download
+                    className={`note-download-btn ${note.isExternal ? 'note-external-btn' : ''}`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    Download free
+                    {note.isExternal ? (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                        View on VU
+                      </>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download free
+                      </>
+                    )}
                   </a>
                 </div>
               ))}
