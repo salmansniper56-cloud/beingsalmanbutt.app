@@ -801,3 +801,129 @@ export async function getMarketplaceAds(opts = {}) {
 
   return { ads, lastDoc: snap.docs[snap.docs.length - 1] };
 }
+
+// ---------- Calls ----------
+export async function sendCallNotification(callerId, receiverId, callType, roomName) {
+  const ref = collection(db, 'calls');
+  const docRef = await addDoc(ref, {
+    callerId,
+    receiverId,
+    callType, // 'video' or 'voice'
+    roomName,
+    status: 'pending', // pending, accepted, declined, missed, ended
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function updateCallStatus(callId, status) {
+  const ref = doc(db, 'calls', callId);
+  await updateDoc(ref, { status, updatedAt: serverTimestamp() });
+}
+
+export function subscribeToIncomingCalls(userId, callback) {
+  const q = query(
+    collection(db, 'calls'),
+    where('receiverId', '==', userId),
+    where('status', '==', 'pending'),
+    orderBy('createdAt', 'desc'),
+    limit(1)
+  );
+  return onSnapshot(q, (snap) => {
+    const calls = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    callback(calls.length > 0 ? calls[0] : null);
+  });
+}
+
+export async function getCallHistory(userId, limitCount = 20) {
+  const q1 = query(
+    collection(db, 'calls'),
+    where('callerId', '==', userId),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const q2 = query(
+    collection(db, 'calls'),
+    where('receiverId', '==', userId),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+  const calls = [
+    ...snap1.docs.map((d) => ({ id: d.id, ...d.data() })),
+    ...snap2.docs.map((d) => ({ id: d.id, ...d.data() })),
+  ];
+  calls.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+  return calls.slice(0, limitCount);
+}
+
+// ---------- Meetings ----------
+export async function createMeeting(data) {
+  const ref = collection(db, 'meetings');
+  const docRef = await addDoc(ref, {
+    title: data.title,
+    description: data.description || '',
+    createdBy: data.createdBy,
+    roomName: data.roomName,
+    scheduledAt: data.scheduledAt ? Timestamp.fromDate(new Date(data.scheduledAt)) : null,
+    isInstant: data.isInstant || false,
+    participants: data.participants || [],
+    status: 'active', // active, ended
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getMeetings(userId, limitCount = 20) {
+  const q = query(
+    collection(db, 'meetings'),
+    where('status', '==', 'active'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+      scheduledAt: data.scheduledAt?.toDate?.()?.toISOString?.() ?? data.scheduledAt,
+    };
+  });
+}
+
+export async function getUserMeetings(userId, limitCount = 20) {
+  const q = query(
+    collection(db, 'meetings'),
+    where('createdBy', '==', userId),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
+      scheduledAt: data.scheduledAt?.toDate?.()?.toISOString?.() ?? data.scheduledAt,
+    };
+  });
+}
+
+export async function endMeeting(meetingId) {
+  const ref = doc(db, 'meetings', meetingId);
+  await updateDoc(ref, { status: 'ended', endedAt: serverTimestamp() });
+}
+
+export async function joinMeeting(meetingId, participantId) {
+  const ref = doc(db, 'meetings', meetingId);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const participants = snap.data().participants || [];
+    if (!participants.includes(participantId)) {
+      await updateDoc(ref, { participants: [...participants, participantId] });
+    }
+  }
+}

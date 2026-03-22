@@ -124,6 +124,7 @@ export default function Layout({ children }) {
         <nav className="layout-nav">
           <Link to="/feed" className={isActive('/feed')}>Feed</Link>
           <Link to="/notes" className={isActive('/notes')}>Notes</Link>
+          <Link to="/meetings" className={isActive('/meetings')}>Meetings</Link>
           <Link to="/map" className={isActive('/map')}>Map</Link>
           <Link to="/messages" className={isActive('/messages')}>Messages</Link>
           <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
@@ -157,6 +158,9 @@ export default function Layout({ children }) {
           </Link>
           <Link to="/notes" className={`sidebar-item ${isActive('/notes')}`}>
             <span className="sidebar-dot" />📚 Notes
+          </Link>
+          <Link to="/meetings" className={`sidebar-item ${isActive('/meetings')}`}>
+            <span className="sidebar-dot" />📹 Online Meetings
           </Link>
           <Link to="/map" className={`sidebar-item ${isActive('/map')}`}>
             <span className="sidebar-dot" />🗺️ Campus Map
@@ -214,24 +218,23 @@ export default function Layout({ children }) {
           </svg>
           Home
         </Link>
+        <Link to="/messages" className={`mobile-nav-item ${isActive('/messages')}`}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+          Chat
+        </Link>
+        <Link to="/meetings" className="mobile-nav-item mobile-nav-post">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M17 12h2M5 12h2"/>
+          </svg>
+          Meet
+        </Link>
         <Link to="/notes" className={`mobile-nav-item ${isActive('/notes')}`}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
           </svg>
           Notes
-        </Link>
-        <Link to="/ad/create" className="mobile-nav-item mobile-nav-post">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-          </svg>
-          Post
-        </Link>
-        <Link to="/map" className={`mobile-nav-item ${isActive('/map')}`}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-            <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
-          </svg>
-          Map
         </Link>
         <Link to={`/profile/${user?.uid}`} className={`mobile-nav-item ${isActive('/profile')}`}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

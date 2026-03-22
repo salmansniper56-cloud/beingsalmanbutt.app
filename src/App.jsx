@@ -5,6 +5,7 @@ import ProfileGuard from './components/ProfileGuard';
 import AIChat from './components/AIChat';
 import Notes from './pages/Notes';
 import AdminUploadNotes from './pages/AdminUploadNotes';
+import Meetings from './pages/Meetings';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -111,6 +112,16 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ChatList />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Online Meetings */}
+        <Route
+          path="/meetings"
+          element={
+            <ProtectedRoute>
+              <Meetings />
             </ProtectedRoute>
           }
         />

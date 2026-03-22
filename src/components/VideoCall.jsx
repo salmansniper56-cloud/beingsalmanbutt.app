@@ -11,9 +11,9 @@ export default function VideoCall({ roomName, userName, userEmail, onClose, isVi
       return;
     }
 
-    const domain = '8x8.vc';
+    const domain = 'meet.jit.si';
     const options = {
-      roomName: `vpaas-magic-cookie-30a7e42068714f67b36f34b0e21dea38/${roomName}`,
+      roomName: roomName,
       parentNode: jitsiContainerRef.current,
       width: '100%',
       height: '100%',
@@ -29,7 +29,6 @@ export default function VideoCall({ roomName, userName, userEmail, onClose, isVi
         hideConferenceTimer: false,
         subject: ' ',
         defaultLanguage: 'en',
-        disableThirdPartyRequests: true,
         enableNoAudioDetection: true,
         enableNoisyMicDetection: true,
         resolution: 720,
@@ -41,10 +40,6 @@ export default function VideoCall({ roomName, userName, userEmail, onClose, isVi
         },
         p2p: {
           enabled: true,
-          stunServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-          ],
         },
       },
       interfaceConfigOverwrite: {
@@ -63,7 +58,6 @@ export default function VideoCall({ roomName, userName, userEmail, onClose, isVi
           'filmstrip',
           'tileview',
           'select-background',
-          'mute-everyone',
         ],
         SHOW_JITSI_WATERMARK: false,
         SHOW_WATERMARK_FOR_GUESTS: false,
@@ -83,7 +77,7 @@ export default function VideoCall({ roomName, userName, userEmail, onClose, isVi
         TOOLBAR_ALWAYS_VISIBLE: false,
         TOOLBAR_TIMEOUT: 4000,
         INITIAL_TOOLBAR_TIMEOUT: 20000,
-        SETTINGS_SECTIONS: ['devices', 'language', 'moderator', 'profile'],
+        SETTINGS_SECTIONS: ['devices', 'language', 'profile'],
         VIDEO_QUALITY_LABEL_DISABLED: false,
       },
       userInfo: {
