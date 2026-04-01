@@ -7,6 +7,12 @@ import CreatePostModal from '../components/CreatePostModal';
 import StoriesList from '../components/StoriesList';
 import './Feed.css';
 
+const MOCK_POSTS = [
+  { id: 'post1', createdBy: 'Jane Doe', content: 'Just finished my final exams! So excited for the summer break. What is everyone planning to do?', likeCount: 45, commentCount: 12, images: [] },
+  { id: 'post2', createdBy: 'Alex Smith', content: 'Does anyone have the notes for CS101? I am willing to trade for advanced calculus notes.', likeCount: 18, commentCount: 5, images: [] },
+  { id: 'post3', createdBy: 'CampusKart Team', content: 'Welcome to the new CampusKart platform! We have completely revamped the design.', likeCount: 120, commentCount: 30, images: ['https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=600&h=400'] }
+];
+
 export default function Feed() {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
@@ -19,7 +25,7 @@ export default function Feed() {
   const loadPosts = useCallback(async () => {
     try {
       const { posts: list } = await getPosts({ limitCount: 50 });
-      setPosts(list);
+      setPosts(list.length > 0 ? list : MOCK_POSTS);
       if (user?.uid) {
         const likedMap = {};
         await Promise.all(list.slice(0, 30).map(async (p) => {
